@@ -637,7 +637,7 @@ void strstr_n(const char *str, char *strDst ,uint16_t idx, int n)
 
 }
 //
-void Passing_Rx_Gateway()
+void Passing_Rx_Gateway()//
 {
 	if(HAL_GetTick() - m_Gcmd.timeStamp>10 && m_Gcmd.timeStamp)
 	{
