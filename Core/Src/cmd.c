@@ -123,6 +123,121 @@ char strData16[16] = "gggggggggggggggg"; // 16개
 char strData20[20] = "hhhhhhhhhhhhhhhhhhhh"; // 20개
 char strData32[32] = "iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii"; // 32개
 
+long data1R ;
+long data2R ;
+long data3R ;
+long data4R ;
+long data5R ;
+long data6R ;
+long data7R ;
+long data8R ;
+long data9R ;
+long data10R;
+long data11R;
+long data12R;
+long data13R;
+long data14R;
+long data15R;
+long data16R;
+long data20R;
+long data32R;
+
+char strData1R[1] ;
+char strData2R[2] ;
+char strData3R[3] ;
+char strData4R[4] ;
+char strData5R[5] ;
+char strData6R[6] ;
+char strData7R[7] ;
+char strData8R[8] ;
+char strData9R[9] ;
+char strData10R[10];
+char strData11R[11];
+char strData12R[12];
+char strData13R[13];
+char strData14R[14];
+char strData15R[15];
+char strData16R[16];
+char strData20R[20];
+char strData32R[32];
+char strData40R[40];
+char strData50R[50];
+
+long data1R_2 ;
+long data2R_2 ;
+long data3R_2 ;
+long data4R_2 ;
+long data5R_2 ;
+long data6R_2 ;
+long data7R_2 ;
+long data8R_2 ;
+long data9R_2 ;
+long data10R_2;
+long data11R_2;
+long data12R_2;
+long data13R_2;
+long data14R_2;
+long data15R_2;
+long data16R_2;
+long data20R_2;
+long data32R_2;
+
+char strData1R_2[1] ;
+char strData2R_2[2] ;
+char strData3R_2[3] ;
+char strData4R_2[4] ;
+char strData5R_2[5] ;
+char strData6R_2[6] ;
+char strData7R_2[7] ;
+char strData8R_2[8] ;
+char strData9R_2[9] ;
+char strData10R_2[10];
+char strData11R_2[11];
+char strData12R_2[12];
+char strData13R_2[13];
+char strData14R_2[14];
+char strData15R_2[15];
+char strData16R_2[16];
+char strData20R_2[20];
+char strData32R_2[32];
+
+long data1R_3 ;
+long data2R_3 ;
+long data3R_3 ;
+long data4R_3 ;
+long data5R_3 ;
+long data6R_3 ;
+long data7R_3 ;
+long data8R_3 ;
+long data9R_3 ;
+long data10R_3;
+long data11R_3;
+long data12R_3;
+long data13R_3;
+long data14R_3;
+long data15R_3;
+long data16R_3;
+long data20R_3;
+long data32R_3;
+
+char strData1R_3[1] ;
+char strData2R_3[2] ;
+char strData3R_3[3] ;
+char strData4R_3[4] ;
+char strData5R_3[5] ;
+char strData6R_3[6] ;
+char strData7R_3[7] ;
+char strData8R_3[8] ;
+char strData9R_3[9] ;
+char strData10R_3[10];
+char strData11R_3[11];
+char strData12R_3[12];
+char strData13R_3[13];
+char strData14R_3[14];
+char strData15R_3[15];
+char strData16R_3[16];
+char strData20R_3[20];
+char strData32R_3[32];
 
 float floatData6 = 12.34, floatMin6= 9.28, floatMax6= 119.74, floatBase6= 500.06;
 
@@ -234,10 +349,10 @@ void Tx_TDAH_1()
 
 		TxStr_Str_Input("facilityCode", commIdx + IDX_TDAH1_8n,  LEN_TDAH1_8n_5,  strData5);
 		TxStr_Str_Input("itemCode",     commIdx + IDX_TDAH1_9n,  LEN_TDAH1_9n_1,  strData1);
-		TxStr_float_Input("measureValue", commIdx + IDX_TDAH1_10n, LEN_TDAH1_10n_6, floatData6);
-		TxStr_Int_Input("dataStatus",   commIdx + IDX_TDAH1_11n, LEN_TDAH1_11n_1, data1);
-		TxStr_Int_Input("opStatus",     commIdx + IDX_TDAH1_12n, LEN_TDAH1_12n_1, data1);
-		TxStr_Int_Input("preventCheck", commIdx + IDX_TDAH1_13n, LEN_TDAH1_13n_1, data1);
+		TxStr_float_Input("measureValue", commIdx + IDX_TDAH1_10n,  LEN_TDAH1_10n_6, floatData6);
+		TxStr_Int_Input("dataStatus",   commIdx + IDX_TDAH1_11n,  LEN_TDAH1_11n_1, data1);
+		TxStr_Int_Input("opStatus",     commIdx + IDX_TDAH1_12n,  LEN_TDAH1_12n_1, data1);
+		TxStr_Int_Input("preventCheck", commIdx + IDX_TDAH1_13n,  LEN_TDAH1_13n_1, data1);
 	}
 
 	// 테일러 (CRC)
@@ -306,13 +421,13 @@ void Tx_3_TDDH()
 	{
 		commIdx = i * IDX_TDDH3_CYCLE;
 
-		TxStr_Str_Input("facilityCode", commIdx + IDX_TDDH3_11n, LEN_TDDH3_11n_5, strData5);
-		TxStr_Str_Input("itemCode",     commIdx + IDX_TDDH3_12n, LEN_TDDH3_12n_1, strData1);
-		TxStr_Int_Input("normalCount",  commIdx + IDX_TDDH3_13n, LEN_TDDH3_13n_3, data3);
-		TxStr_Int_Input("abnormalCount",commIdx + IDX_TDDH3_14n, LEN_TDDH3_14n_3, data3);
-		TxStr_Int_Input("commFailCount",commIdx + IDX_TDDH3_15n, LEN_TDDH3_15n_3, data3);
-		TxStr_Int_Input("pwrOffCount",  commIdx + IDX_TDDH3_16n, LEN_TDDH3_16n_3, data3);
-		TxStr_Int_Input("checkCount",   commIdx + IDX_TDDH3_17n, LEN_TDDH3_17n_3, data3);
+		TxStr_Str_Input("facilityCode", commIdx + IDX_TDDH3_11n,  LEN_TDDH3_11n_5, strData5);
+		TxStr_Str_Input("itemCode",     commIdx + IDX_TDDH3_12n,  LEN_TDDH3_12n_1, strData1);
+		TxStr_Int_Input("normalCount",  commIdx + IDX_TDDH3_13n,  LEN_TDDH3_13n_3, data3);
+		TxStr_Int_Input("abnormalCount",commIdx + IDX_TDDH3_14n,  LEN_TDDH3_14n_3, data3);
+		TxStr_Int_Input("commFailCount",commIdx + IDX_TDDH3_15n,  LEN_TDDH3_15n_3, data3);
+		TxStr_Int_Input("pwrOffCount",  commIdx + IDX_TDDH3_16n,  LEN_TDDH3_16n_3, data3);
+		TxStr_Int_Input("checkCount",   commIdx + IDX_TDDH3_17n,  LEN_TDDH3_17n_3, data3);
 	}
 
 	// 테일러 (CRC)
@@ -347,10 +462,10 @@ void Tx_4_TFDH()
 
 		TxStr_Str_Input("facilityCode", commIdx + IDX_TFDH4_8n,  LEN_TFDH4_8n_5,  strData5);
 		TxStr_Str_Input("itemCode",     commIdx + IDX_TFDH4_9n,  LEN_TFDH4_9n_1,  strData1);
-		TxStr_float_Input("measureValue", commIdx + IDX_TFDH4_10n, LEN_TFDH4_10n_6, floatData6);
-		TxStr_Int_Input("dataStatus",   commIdx + IDX_TFDH4_11n, LEN_TFDH4_11n_1, data1);
-		TxStr_Int_Input("opStatus",     commIdx + IDX_TFDH4_12n, LEN_TFDH4_12n_1, data1);
-		TxStr_Int_Input("exhaustCheck", commIdx + IDX_TFDH4_13n, LEN_TFDH4_13n_1, data1);
+		TxStr_float_Input("measureValue", commIdx + IDX_TFDH4_10n,  LEN_TFDH4_10n_6, floatData6);
+		TxStr_Int_Input("dataStatus",   commIdx + IDX_TFDH4_11n,  LEN_TFDH4_11n_1, data1);
+		TxStr_Int_Input("opStatus",     commIdx + IDX_TFDH4_12n,  LEN_TFDH4_12n_1, data1);
+		TxStr_Int_Input("exhaustCheck", commIdx + IDX_TFDH4_13n,  LEN_TFDH4_13n_1, data1);
 	}
 
 	// 테일러 (CRC)
@@ -384,11 +499,11 @@ void Tx_5_TDUH()
 		commIdx = i * IDX_TDUH5_CYCLE;
 
 		TxStr_Str_Input("facilityCode", commIdx + IDX_TDUH5_8n,  LEN_TDUH5_8n_5,  strData5);
-		TxStr_Str_Input("itemCode",     commIdx + IDX_TDUH5_9n,  LEN_TDUH5_9n_1,  strData1);
-		TxStr_float_Input("measureValue", commIdx + IDX_TDUH5_10n, LEN_TDUH5_10n_6, floatData6);
-		TxStr_Int_Input("dataStatus",   commIdx + IDX_TDUH5_11n, LEN_TDUH5_11n_1, data1);
-		TxStr_Int_Input("opStatus",     commIdx + IDX_TDUH5_12n, LEN_TDUH5_12n_1, data1);
-		TxStr_Int_Input("exhaustCheck", commIdx + IDX_TDUH5_13n, LEN_TDUH5_13n_1, data1);
+		TxStr_Str_Input("itemCode", commIdx + IDX_TDUH5_9n,      LEN_TDUH5_9n_1,  strData1);
+		TxStr_float_Input("measureValue", commIdx + IDX_TDUH5_10n,  LEN_TDUH5_10n_6, floatData6);
+		TxStr_Int_Input("dataStatus", commIdx + IDX_TDUH5_11n,  LEN_TDUH5_11n_1, data1);
+		TxStr_Int_Input("opStatus", commIdx + IDX_TDUH5_12n,  LEN_TDUH5_12n_1, data1);
+		TxStr_Int_Input("exhaustCheck", commIdx + IDX_TDUH5_13n,  LEN_TDUH5_13n_1, data1);
 	}
 
 	// 테일러 (CRC)
@@ -421,9 +536,9 @@ void Tx_6_TNOH()
 	{
 		commIdx = i * IDX_TNOH6_CYCLE;
 
-		TxStr_Str_Input("facilityCode", commIdx + IDX_TNOH6_8n,  LEN_TNOH6_8n_5,  strData5);
-		TxStr_Str_Input("itemCode",     commIdx + IDX_TNOH6_9n,  LEN_TNOH6_9n_1,  strData1);
-		TxStr_Int_Input("opStatus",     commIdx + IDX_TNOH6_10n, LEN_TNOH6_10n_1, data1);
+		TxStr_Str_Input("facilityCode", commIdx + IDX_TNOH6_8n, LEN_TNOH6_8n_5,  strData5);
+		TxStr_Str_Input("itemCode", commIdx + IDX_TNOH6_9n, LEN_TNOH6_9n_1,  strData1);
+		TxStr_Int_Input("opStatus", commIdx + IDX_TNOH6_10n, LEN_TNOH6_10n_1, data1);
 		TxStr_Int_Input("preventCheck", commIdx + IDX_TNOH6_11n, LEN_TNOH6_11n_1, data1);
 	}
 
@@ -512,7 +627,7 @@ void Tx_15_TFCR()
 	TxStr_Int_Input("totalLen",     IDX_COMM_4,     LEN_COMM_4_4,     data4);
 
 	// 바디 (고정)
-	TxStr_Int_Input("relationCount",IDX_TFCR15_5,   LEN_TFCR15_5_2,   data2);
+	TxStr_Int_Input("relationCount",  IDX_TFCR15_5,   LEN_TFCR15_5_2,   data2);
 
 	// 바디 (가변)
 	int commIdx;
@@ -553,9 +668,9 @@ void Tx_21_TCN2()
 	TxStr_Str_Input("hashCode",     IDX_TCN2_21_10,  LEN_TCN2_21_10_32, strData32);
 	TxStr_Str_Input("password",     IDX_TCN2_21_11,  LEN_TCN2_21_11_16, strData16);
 	TxStr_Int_Input("unsendTime",   IDX_TCN2_21_12,  LEN_TCN2_21_12_4,  data4);
-	TxStr_Str_Input("transferMode", IDX_TCN2_21_13,  LEN_TCN2_21_13_1,  strData1);
-	TxStr_Int_Input("exhaustDelay", IDX_TCN2_21_14,  LEN_TCN2_21_14_3,  data3);
-	TxStr_Int_Input("preventDelay", IDX_TCN2_21_15,  LEN_TCN2_21_15_3,  data3);
+	TxStr_Str_Input("transferMode",  IDX_TCN2_21_13,  LEN_TCN2_21_13_1,  strData1);
+	TxStr_Int_Input("exhaustDelay",  IDX_TCN2_21_14,  LEN_TCN2_21_14_3,  data3);
+	TxStr_Int_Input("preventDelay",  IDX_TCN2_21_15,  LEN_TCN2_21_15_3,  data3);
 	TxStr_Int_Input("itemCount",    IDX_TCN2_21_16,  LEN_TCN2_21_16_2,  data2);
 
 	// 바디 (가변)
@@ -564,7 +679,7 @@ void Tx_21_TCN2()
 	{
 		commIdx = i * IDX_TCN2_21_CYCLE;
 
-		TxStr_Str_Input("facilityCode", commIdx + IDX_TCN2_21_17n, LEN_TCN2_21_17_5n, strData5);
+		TxStr_Str_Input("facilityCode",  commIdx + IDX_TCN2_21_17n, LEN_TCN2_21_17_5n, strData5);
 		TxStr_Str_Input("itemCode",     commIdx + IDX_TCN2_21_18n, LEN_TCN2_21_18_1n, strData1);
 		TxStr_float_Input("rangeMin",   commIdx + IDX_TCN2_21_19n, LEN_TCN2_21_19_6n, floatMin6);
 		TxStr_float_Input("rangeMax",   commIdx + IDX_TCN2_21_20n, LEN_TCN2_21_20_6n, floatMax6);
@@ -580,16 +695,7 @@ void Tx_21_TCN2()
 }
 
 
-void Testfunction()
-{
-    static uint32_t timeStamp;
 
-//    Tx_TVER_11();
-    if(HAL_GetTick()-timeStamp >= 1000)
-    {
-        timeStamp = HAL_GetTick();
-    }
-}
 void Tx_Config()
 {
 	TxStr_Int_Input("data1", 0, 3, data1 );
@@ -637,39 +743,358 @@ void strstr_n(const char *str, char *strDst ,uint16_t idx, int n)
 
 }
 //
+
+
+
+void Rx_Passing_5_PDUH()
+{
+    if(m_Gcmd.passingCnt == TOTAL_LEN_PDUH5)
+    {
+        strstr_n(m_Gcmd.passingBuff, strData4R, IDX_COMM_1, LEN_COMM_1_4);
+        strstr_n(m_Gcmd.passingBuff, strData7R, IDX_COMM_2, LEN_COMM_2_7);
+        strstr_n(m_Gcmd.passingBuff, strData3R, IDX_COMM_3, LEN_COMM_3_3);
+        strtol_n(m_Gcmd.passingBuff, &data4R, IDX_COMM_4, LEN_COMM_4_4);
+        strstr_n(m_Gcmd.passingBuff, strData3R_2, IDX_COMM_5, LEN_COMM_5_3);
+
+        strstr_n(m_Gcmd.passingBuff, strData10R, IDX_PDUH5_6, LEN_PDUH5_6_10);
+        strstr_n(m_Gcmd.passingBuff, strData10R_2, IDX_PDUH5_7, LEN_PDUH5_7_10);
+        strtol_n(m_Gcmd.passingBuff, &data2R, IDX_PDUH5_CRC, 2);
+    }
+    else
+    {
+        printf("cntErr %hhu\r\n", m_Gcmd.passingCnt);
+    }
+
+
+}
+
+// [7] PFST - 미전송자료 전송시간 변경 요청
+void Rx_Passing_7_PFST()
+{
+    if(m_Gcmd.passingCnt == TOTAL_LEN_PFST7)
+    {
+        strstr_n(m_Gcmd.passingBuff, strData4R,   IDX_COMM_1, LEN_COMM_1_4);
+        strstr_n(m_Gcmd.passingBuff, strData7R,   IDX_COMM_2, LEN_COMM_2_7);
+        strstr_n(m_Gcmd.passingBuff, strData3R,   IDX_COMM_3, LEN_COMM_3_3);
+        strtol_n(m_Gcmd.passingBuff, &data4R,     IDX_COMM_4, LEN_COMM_4_4);
+
+        strtol_n(m_Gcmd.passingBuff, &data4R_2,   IDX_PFST7_5, LEN_PFST7_5_4); // 전송시간
+        strtol_n(m_Gcmd.passingBuff, &data2R,     IDX_PFST7_CRC, 2);
+    }
+    else
+    {
+        printf("cntErr %hhu\r\n", m_Gcmd.passingCnt);
+    }
+}
+// [8] PSEP - 비밀번호 변경 요청
+void Rx_Passing_8_PSEP()
+{
+    if(m_Gcmd.passingCnt == TOTAL_LEN_PSEP8)
+    {
+        strstr_n(m_Gcmd.passingBuff, strData4R,   IDX_COMM_1, LEN_COMM_1_4);
+        strstr_n(m_Gcmd.passingBuff, strData7R,   IDX_COMM_2, LEN_COMM_2_7);
+        strstr_n(m_Gcmd.passingBuff, strData3R,   IDX_COMM_3, LEN_COMM_3_3);
+        strtol_n(m_Gcmd.passingBuff, &data4R,     IDX_COMM_4, LEN_COMM_4_4);
+
+        strstr_n(m_Gcmd.passingBuff, strData16R,  IDX_PSEP8_5, LEN_PSEP8_5_16); // 암호화 패스워드
+        strtol_n(m_Gcmd.passingBuff, &data2R,     IDX_PSEP8_CRC, 2);
+    }
+    else
+    {
+        printf("cntErr %hhu\r\n", m_Gcmd.passingCnt);
+    }
+}
+
+// [9] PTIM - 서버시간 응답
+void Rx_Passing_9_PTIM()
+{
+    if(m_Gcmd.passingCnt == TOTAL_LEN_PTIM9)
+    {
+        strstr_n(m_Gcmd.passingBuff, strData4R,   IDX_COMM_1, LEN_COMM_1_4);
+        strstr_n(m_Gcmd.passingBuff, strData7R,   IDX_COMM_2, LEN_COMM_2_7);
+        strstr_n(m_Gcmd.passingBuff, strData3R,   IDX_COMM_3, LEN_COMM_3_3);
+        strtol_n(m_Gcmd.passingBuff, &data4R,     IDX_COMM_4, LEN_COMM_4_4);
+
+        strstr_n(m_Gcmd.passingBuff, strData12R,    IDX_PTIM9_5, LEN_PTIM9_5_12); // 서버시간
+        strtol_n(m_Gcmd.passingBuff, &data2R,     IDX_PTIM9_CRC, 2);
+    }
+    else
+    {
+        printf("cntErr %hhu\r\n", m_Gcmd.passingCnt);
+    }
+}
+
+// [10] PUPG - 게이트웨이 업그레이드 요청
+void Rx_Passing_10_PUPG()
+{
+    if(m_Gcmd.passingCnt == TOTAL_LEN_PUPG10)
+    {
+        strstr_n(m_Gcmd.passingBuff, strData4R,   IDX_COMM_1, LEN_COMM_1_4);
+        strstr_n(m_Gcmd.passingBuff, strData7R,   IDX_COMM_2, LEN_COMM_2_7);
+        strstr_n(m_Gcmd.passingBuff, strData3R,   IDX_COMM_3, LEN_COMM_3_3);
+        strtol_n(m_Gcmd.passingBuff, &data4R,     IDX_COMM_4, LEN_COMM_4_4);
+
+        strtol_n(m_Gcmd.passingBuff, &data1R,     IDX_PUPG10_5, LEN_PUPG10_5_1);   // FTP 타입
+        strstr_n(m_Gcmd.passingBuff, strData40R,  IDX_PUPG10_6, LEN_PUPG10_6_40);  // FTP IP/Domain
+        strtol_n(m_Gcmd.passingBuff, &data5R,     IDX_PUPG10_7, LEN_PUPG10_7_5);   // FTP Port
+        strstr_n(m_Gcmd.passingBuff, strData50R,  IDX_PUPG10_8, LEN_PUPG10_8_50);  // 파일 경로
+        strstr_n(m_Gcmd.passingBuff, strData10R, IDX_PUPG10_9, LEN_PUPG10_9_10);  // FTP ID
+        strstr_n(m_Gcmd.passingBuff, strData10R_2, IDX_PUPG10_10, LEN_PUPG10_10_10);// FTP PWD
+        strstr_n(m_Gcmd.passingBuff, strData15R,  IDX_PUPG10_11, LEN_PUPG10_11_15);// 통신서버 IP
+
+        strtol_n(m_Gcmd.passingBuff, &data2R,     IDX_PUPG10_CRC, 2);
+    }
+    else
+    {
+        printf("cntErr %hhu\r\n", m_Gcmd.passingCnt);
+    }
+}
+
+// [11] PVER - 버전정보 요청
+void Rx_Passing_11_PVER()
+{
+    if(m_Gcmd.passingCnt == TOTAL_LEN_PVER11)
+    {
+        strstr_n(m_Gcmd.passingBuff, strData4R,   IDX_COMM_1, LEN_COMM_1_4);
+        strstr_n(m_Gcmd.passingBuff, strData7R,   IDX_COMM_2, LEN_COMM_2_7);
+        strstr_n(m_Gcmd.passingBuff, strData3R,   IDX_COMM_3, LEN_COMM_3_3);
+        strtol_n(m_Gcmd.passingBuff, &data4R,     IDX_COMM_4, LEN_COMM_4_4);
+
+        strtol_n(m_Gcmd.passingBuff, &data2R,     IDX_PVER11_CRC, 2);
+    }
+    else
+    {
+        printf("cntErr %hhu\r\n", m_Gcmd.passingCnt);
+    }
+}
+
+// [12] PSET - GW 시간 변경 요청
+void Rx_Passing_12_PSET()
+{
+    if(m_Gcmd.passingCnt == TOTAL_LEN_PSET12)
+    {
+        strstr_n(m_Gcmd.passingBuff, strData4R,   IDX_COMM_1, LEN_COMM_1_4);
+        strstr_n(m_Gcmd.passingBuff, strData7R,   IDX_COMM_2, LEN_COMM_2_7);
+        strstr_n(m_Gcmd.passingBuff, strData3R,   IDX_COMM_3, LEN_COMM_3_3);
+        strtol_n(m_Gcmd.passingBuff, &data4R,     IDX_COMM_4, LEN_COMM_4_4);
+
+        strstr_n(m_Gcmd.passingBuff, strData12R,    IDX_PSET12_5, LEN_PSET12_5_12); // 서버시간 변경값
+        strtol_n(m_Gcmd.passingBuff, &data2R,     IDX_PSET12_CRC, 2);
+    }
+    else
+    {
+        printf("cntErr %hhu\r\n", m_Gcmd.passingCnt);
+    }
+}
+
+// [13] PFCC - 시설코드 변경 요청
+void Rx_Passing_13_PFCC()
+{
+    if(m_Gcmd.passingCnt == TOTAL_LEN_PFCC13)
+    {
+        strstr_n(m_Gcmd.passingBuff, strData4R,   IDX_COMM_1, LEN_COMM_1_4);
+        strstr_n(m_Gcmd.passingBuff, strData7R,   IDX_COMM_2, LEN_COMM_2_7);
+        strstr_n(m_Gcmd.passingBuff, strData3R,   IDX_COMM_3, LEN_COMM_3_3);
+        strtol_n(m_Gcmd.passingBuff, &data4R,     IDX_COMM_4, LEN_COMM_4_4);
+
+        strstr_n(m_Gcmd.passingBuff, strData5R,   IDX_PFCC13_5, LEN_PFCC13_5_5); // 이전 시설코드
+        strstr_n(m_Gcmd.passingBuff, strData5R_2, IDX_PFCC13_6, LEN_PFCC13_6_5); // 변경 시설코드
+        strtol_n(m_Gcmd.passingBuff, &data2R,     IDX_PFCC13_CRC, 2);
+    }
+    else
+    {
+        printf("cntErr %hhu\r\n", m_Gcmd.passingCnt);
+    }
+}
+
+// [14] PAST - 측정범위 변경 요청 (N개 가변항목 구조)
+//void Rx_Passing_14_PAST()
+//{
+//    // 가변 패킷이므로 최소 고정부 크기(20바이트) 이상 수신되었는지 1차 체크
+//    if(m_Gcmd.passingCnt >= IDX_PAST14_6n)
+//    {
+//        strstr_n(m_Gcmd.passingBuff, strData4R,   IDX_COMM_1, LEN_COMM_1_4);
+//        strstr_n(m_Gcmd.passingBuff, strData7R,   IDX_COMM_2, LEN_COMM_2_7);
+//        strstr_n(m_Gcmd.passingBuff, strData3R,   IDX_COMM_3, LEN_COMM_3_3);
+//        strtol_n(m_Gcmd.passingBuff, &data4R,     IDX_COMM_4, LEN_COMM_4_4);
+
+//        long itemCount = 0;
+//        strtol_n(m_Gcmd.passingBuff, &itemCount,  IDX_PAST14_5, LEN_PAST14_5_2); // 변경 항목 수(N)
+
+//        // 가변 루프 전진용 인덱스 설정
+//        uint16_t variableIdx = IDX_PAST14_6n;
+
+//        for(int i = 0; i < itemCount; i++)
+//        {
+//            // 루프마다 각각 배열(i)이나 구조체 멤버에 순서대로 매칭하여 파싱
+//            strstr_n(m_Gcmd.passingBuff, strArrFacility[i], variableIdx, LEN_PAST14_6n_5); // 시설코드
+//            strstr_n(m_Gcmd.passingBuff, strArrItem[i],     variableIdx + 5, LEN_PAST14_7n_1); // 항목코드
+
+//            // ★ 규격서 확인: 범위 한계 설정값(최소/최대/기준)이 실수 형태이면 strtof_n 사용!
+//            strtof_n(m_Gcmd.passingBuff, &fArrMin[i],       variableIdx + 6, LEN_PAST14_8n_6); // 최소값
+//            strtof_n(m_Gcmd.passingBuff, &fArrMax[i],       variableIdx + 12, LEN_PAST14_9n_6); // 최대값
+//            strtof_n(m_Gcmd.passingBuff, &fArrBase[i],      variableIdx + 18, LEN_PAST14_10n_6);// 기준값
+
+//            // 정의된 보폭 수치(24바이트)만큼 다음 항목으로 점프
+//            variableIdx += IDX_PAST14_CYCLE;
+//        }
+
+//        // 루프 탈출 후 최종 위치의 2바이트 강제 수신 테스트 매칭
+//        strtol_n(m_Gcmd.passingBuff, &data2R, variableIdx, 2);
+//    }
+//}
+// [15] PFCR - 관계정보 조회 요청
+void Rx_Passing_15_PFCR()
+{
+    if(m_Gcmd.passingCnt == TOTAL_LEN_PFCR15)
+    {
+        strstr_n(m_Gcmd.passingBuff, strData4R,   IDX_COMM_1, LEN_COMM_1_4);
+        strstr_n(m_Gcmd.passingBuff, strData7R,   IDX_COMM_2, LEN_COMM_2_7);
+        strstr_n(m_Gcmd.passingBuff, strData3R,   IDX_COMM_3, LEN_COMM_3_3);
+        strtol_n(m_Gcmd.passingBuff, &data4R,     IDX_COMM_4, LEN_COMM_4_4);
+
+        strtol_n(m_Gcmd.passingBuff, &data2R,     IDX_PFCR15_CRC, 2);
+    }
+    else
+    {
+        printf("cntErr %hhu\r\n", m_Gcmd.passingCnt);
+    }
+}
+
+// [16] PFRS - 방지시설 정상여부 관계정보 변경 요청 (N개 가변관계 구조)
+//void Rx_Passing_16_PFRS()
+//{
+//    // 최소 고정부 크기(20바이트) 이상 수신 체크
+//    if(m_Gcmd.passingCnt >= IDX_PFRS16_6n)
+//    {
+//        strstr_n(m_Gcmd.passingBuff, strData4R,   IDX_COMM_1, LEN_COMM_1_4);
+//        strstr_n(m_Gcmd.passingBuff, strData7R,   IDX_COMM_2, LEN_COMM_2_7);
+//        strstr_n(m_Gcmd.passingBuff, strData3R,   IDX_COMM_3, LEN_COMM_3_3);
+//        strtol_n(m_Gcmd.passingBuff, &data4R,     IDX_COMM_4, LEN_COMM_4_4);
+
+//        long relationCount = 0;
+//        strtol_n(m_Gcmd.passingBuff, &relationCount, IDX_PFRS16_5, LEN_PFRS16_5_2); // 관계 정보 수(N)
+
+//        uint16_t variableIdx = IDX_PFRS16_6n;
+
+//        for(int i = 0; i < relationCount; i++)
+//        {
+//            strstr_n(m_Gcmd.passingBuff, strArrDischarge[i], variableIdx, LEN_PFRS16_6n_5); // 배출시설코드
+//            strstr_n(m_Gcmd.passingBuff, strArrPrevent[i],   variableIdx + 5, LEN_PFRS16_7n_5); // 방지시설코드
+
+//            // 정의된 보폭 수치(10바이트)만큼 다음 항목으로 점프
+//            variableIdx += IDX_PFRS16_CYCLE;
+//        }
+
+//        // 루프 탈출 후 최종 위치의 2바이트 강제 수신 테스트 매칭
+//        strtol_n(m_Gcmd.passingBuff, &data2R, variableIdx, 2);
+//    }
+//}
+// [17] PRSI - 통신서버IP 변경 요청
+void Rx_Passing_17_PRSI()
+{
+    if(m_Gcmd.passingCnt == TOTAL_LEN_PRSI17)
+    {
+        strstr_n(m_Gcmd.passingBuff, strData4R,   IDX_COMM_1, LEN_COMM_1_4);
+        strstr_n(m_Gcmd.passingBuff, strData7R,   IDX_COMM_2, LEN_COMM_2_7);
+        strstr_n(m_Gcmd.passingBuff, strData3R,   IDX_COMM_3, LEN_COMM_3_3);
+        strtol_n(m_Gcmd.passingBuff, &data4R,     IDX_COMM_4, LEN_COMM_4_4);
+
+        strstr_n(m_Gcmd.passingBuff, strData16R,  IDX_PRSI17_5, LEN_PRSI17_5_16); // 암호화 IP
+        strtol_n(m_Gcmd.passingBuff, &data2R,     IDX_PRSI17_CRC, 2);
+    }
+    else
+    {
+        printf("cntErr %hhu\r\n", m_Gcmd.passingCnt);
+    }
+}
+
+// [18] PDAT - 자료전송모드 변경 요청
+void Rx_Passing_18_PDAT()
+{
+    if(m_Gcmd.passingCnt == TOTAL_LEN_PDAT18)
+    {
+        strstr_n(m_Gcmd.passingBuff, strData4R,   IDX_COMM_1, LEN_COMM_1_4);
+        strstr_n(m_Gcmd.passingBuff, strData7R,   IDX_COMM_2, LEN_COMM_2_7);
+        strstr_n(m_Gcmd.passingBuff, strData3R,   IDX_COMM_3, LEN_COMM_3_3);
+        strtol_n(m_Gcmd.passingBuff, &data4R,     IDX_COMM_4, LEN_COMM_4_4);
+
+        strtol_n(m_Gcmd.passingBuff, &data1R,     IDX_PDAT18_5, LEN_PDAT18_5_1); // 전송모드
+        strtol_n(m_Gcmd.passingBuff, &data2R,     IDX_PDAT18_CRC, 2);
+    }
+    else
+    {
+        printf("cntErr %hhu\r\n", m_Gcmd.passingCnt);
+    }
+}
+
+// [19] PODT - 유예시간 설정 변경 요청
+void Rx_Passing_19_PODT()
+{
+    if(m_Gcmd.passingCnt == TOTAL_LEN_PODT19)
+    {
+        strstr_n(m_Gcmd.passingBuff, strData4R,   IDX_COMM_1, LEN_COMM_1_4);
+        strstr_n(m_Gcmd.passingBuff, strData7R,   IDX_COMM_2, LEN_COMM_2_7);
+        strstr_n(m_Gcmd.passingBuff, strData3R,   IDX_COMM_3, LEN_COMM_3_3);
+        strtol_n(m_Gcmd.passingBuff, &data4R,     IDX_COMM_4, LEN_COMM_4_4);
+
+        strtol_n(m_Gcmd.passingBuff, &data3R,   IDX_PODT19_5, LEN_PODT19_5_3); // 배출 가동유예
+        strtol_n(m_Gcmd.passingBuff, &data3R_2,   IDX_PODT19_6, LEN_PODT19_6_3); // 방지 정지유예
+        strtol_n(m_Gcmd.passingBuff, &data2R,     IDX_PODT19_CRC, 2);
+    }
+    else
+    {
+        printf("cntErr %hhu\r\n", m_Gcmd.passingCnt);
+    }
+}
+void Rx_Passing_20_PCN2()
+{
+    if(m_Gcmd.passingCnt == TOTAL_LEN_PCN2_20)
+    {
+        strstr_n(m_Gcmd.passingBuff, strData4R,   IDX_COMM_1, LEN_COMM_1_4);
+        strstr_n(m_Gcmd.passingBuff, strData7R,   IDX_COMM_2, LEN_COMM_2_7);
+        strstr_n(m_Gcmd.passingBuff, strData3R,   IDX_COMM_3, LEN_COMM_3_3);
+        strtol_n(m_Gcmd.passingBuff, &data4R,     IDX_COMM_4, LEN_COMM_4_4);
+
+        strtol_n(m_Gcmd.passingBuff, &data2R,     IDX_PCN220_CRC, 2);
+    }
+    else
+    {
+        printf("cntErr %hhu\r\n", m_Gcmd.passingCnt);
+    }
+}
+
+// [22] PRBT - GW 재기동 요청
+void Rx_Passing_22_PRBT()
+{
+    if(m_Gcmd.passingCnt == TOTAL_LEN_PRBT22)
+    {
+        strstr_n(m_Gcmd.passingBuff, strData4R,   IDX_COMM_1, LEN_COMM_1_4);
+        strstr_n(m_Gcmd.passingBuff, strData7R,   IDX_COMM_2, LEN_COMM_2_7);
+        strstr_n(m_Gcmd.passingBuff, strData3R,   IDX_COMM_3, LEN_COMM_3_3);
+        strtol_n(m_Gcmd.passingBuff, &data4R,     IDX_COMM_4, LEN_COMM_4_4);
+
+        strtol_n(m_Gcmd.passingBuff, &data2R,     IDX_PRBT22_CRC, 2);
+    }
+    else
+    {
+        printf("cntErr %hhu\r\n", m_Gcmd.passingCnt);
+    }
+}
+
 void Passing_Rx_Gateway()//
 {
-	if(HAL_GetTick() - m_Gcmd.timeStamp>10 && m_Gcmd.timeStamp)
+	if(HAL_GetTick() - m_Gcmd.timeStamp>30 && m_Gcmd.timeStamp)
 	{
 		memcpy(m_Gcmd.passingBuff, m_Gcmd.rxBuff, m_Gcmd.rxCnt);
 		memset(m_Gcmd.rxBuff, 0, sizeof(m_Gcmd.rxBuff));
 		m_Gcmd.passingCnt = m_Gcmd.rxCnt;
-		if(m_Gcmd.passingCnt == 12)
-		{
-//			strtol_n(m_Gcmd.passingBuff, 0, 4);
-//			strtol_n(m_Gcmd.passingBuff, 4, 5);
-//			strtol_n(m_Gcmd.passingBuff, 9, 2);
-//			strtol_n(m_Gcmd.passingBuff, 11, 1);
-		}
+        Rx_Passing_22_PRBT();
 
 
 		m_Gcmd.timeStamp = 0;
 		m_Gcmd.rxCnt = 0;
 	}
-}
-
-
-void Rx_Passing_PVER_11()
-{
-    if(m_Gcmd.passingCnt == TOTAL_LEN_PVER11_REQ)
-    {
- //       strtol_n(m_Gcmd.passingBuff, 0, 4);
- //       strtol_n(m_Gcmd.passingBuff, 4, 7);
-  //      strtol_n(m_Gcmd.passingBuff, 11, 3);
-  //      strtol_n(m_Gcmd.passingBuff, 14, 4);
-  //      strtol_n(m_Gcmd.passingBuff, 18, 2);
-    }
-
 }
 
 void Rx_Gateway_Config(uint8_t rxData)
@@ -742,6 +1167,11 @@ void Uart_Simple_Rx_Passing(UART_T* uart, uint8_t rxData)
 
 
 	}
+}
+void Testfunction()
+{
+    Passing_Rx_Gateway();
+
 }
 
 
