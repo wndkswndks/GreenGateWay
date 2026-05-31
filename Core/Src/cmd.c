@@ -908,41 +908,41 @@ void Rx_Passing_13_PFCC()
 }
 
 // [14] PAST - 측정범위 변경 요청 (N개 가변항목 구조)
-//void Rx_Passing_14_PAST()
-//{
-//    // 가변 패킷이므로 최소 고정부 크기(20바이트) 이상 수신되었는지 1차 체크
-//    if(m_Gcmd.passingCnt >= IDX_PAST14_6n)
-//    {
-//        strstr_n(m_Gcmd.passingBuff, strData4R,   IDX_COMM_1, LEN_COMM_1_4);
-//        strstr_n(m_Gcmd.passingBuff, strData7R,   IDX_COMM_2, LEN_COMM_2_7);
-//        strstr_n(m_Gcmd.passingBuff, strData3R,   IDX_COMM_3, LEN_COMM_3_3);
-//        strtol_n(m_Gcmd.passingBuff, &data4R,     IDX_COMM_4, LEN_COMM_4_4);
+void Rx_Passing_14_PAST()
+{
+    // 가변 패킷이므로 최소 고정부 크기(20바이트) 이상 수신되었는지 1차 체크
+    if(m_Gcmd.passingCnt >= IDX_PAST14_6n)
+    {
+        strstr_n(m_Gcmd.passingBuff, strData4R,   IDX_COMM_1, LEN_COMM_1_4);
+        strstr_n(m_Gcmd.passingBuff, strData7R,   IDX_COMM_2, LEN_COMM_2_7);
+        strstr_n(m_Gcmd.passingBuff, strData3R,   IDX_COMM_3, LEN_COMM_3_3);
+        strtol_n(m_Gcmd.passingBuff, &data4R,     IDX_COMM_4, LEN_COMM_4_4);
 
-//        long itemCount = 0;
-//        strtol_n(m_Gcmd.passingBuff, &itemCount,  IDX_PAST14_5, LEN_PAST14_5_2); // 변경 항목 수(N)
+        long itemCount = 0;
+        strtol_n(m_Gcmd.passingBuff, &itemCount,  IDX_PAST14_5, LEN_PAST14_5_2); // 변경 항목 수(N)
 
-//        // 가변 루프 전진용 인덱스 설정
-//        uint16_t variableIdx = IDX_PAST14_6n;
+        // 가변 루프 전진용 인덱스 설정
+        uint16_t variableIdx = IDX_PAST14_6n;
 
-//        for(int i = 0; i < itemCount; i++)
-//        {
-//            // 루프마다 각각 배열(i)이나 구조체 멤버에 순서대로 매칭하여 파싱
-//            strstr_n(m_Gcmd.passingBuff, strArrFacility[i], variableIdx, LEN_PAST14_6n_5); // 시설코드
-//            strstr_n(m_Gcmd.passingBuff, strArrItem[i],     variableIdx + 5, LEN_PAST14_7n_1); // 항목코드
+        for(int i = 0; i < itemCount; i++)
+        {
+            // 루프마다 각각 배열(i)이나 구조체 멤버에 순서대로 매칭하여 파싱
+            strstr_n(m_Gcmd.passingBuff, strData5R, variableIdx, LEN_PAST14_6n_5); // 시설코드
+            strstr_n(m_Gcmd.passingBuff, strData7R_2,     variableIdx + 5, LEN_PAST14_7n_1); // 항목코드
 
-//            // ★ 규격서 확인: 범위 한계 설정값(최소/최대/기준)이 실수 형태이면 strtof_n 사용!
-//            strtof_n(m_Gcmd.passingBuff, &fArrMin[i],       variableIdx + 6, LEN_PAST14_8n_6); // 최소값
-//            strtof_n(m_Gcmd.passingBuff, &fArrMax[i],       variableIdx + 12, LEN_PAST14_9n_6); // 최대값
-//            strtof_n(m_Gcmd.passingBuff, &fArrBase[i],      variableIdx + 18, LEN_PAST14_10n_6);// 기준값
+            // ★ 규격서 확인: 범위 한계 설정값(최소/최대/기준)이 실수 형태이면 strtof_n 사용!
+            strtof_n(m_Gcmd.passingBuff, &data6R,       variableIdx + 6, LEN_PAST14_8n_6); // 최소값
+            strtof_n(m_Gcmd.passingBuff, &data6R_2,       variableIdx + 12, LEN_PAST14_9n_6); // 최대값
+            strtof_n(m_Gcmd.passingBuff, &data6R_3,      variableIdx + 18, LEN_PAST14_10n_6);// 기준값
 
-//            // 정의된 보폭 수치(24바이트)만큼 다음 항목으로 점프
-//            variableIdx += IDX_PAST14_CYCLE;
-//        }
+            // 정의된 보폭 수치(24바이트)만큼 다음 항목으로 점프
+            variableIdx += IDX_PAST14_CYCLE;
+        }
 
-//        // 루프 탈출 후 최종 위치의 2바이트 강제 수신 테스트 매칭
-//        strtol_n(m_Gcmd.passingBuff, &data2R, variableIdx, 2);
-//    }
-//}
+        // 루프 탈출 후 최종 위치의 2바이트 강제 수신 테스트 매칭
+        strtol_n(m_Gcmd.passingBuff, &data2R, variableIdx, 2);
+    }
+}
 // [15] PFCR - 관계정보 조회 요청
 void Rx_Passing_15_PFCR()
 {
@@ -961,35 +961,35 @@ void Rx_Passing_15_PFCR()
     }
 }
 
-// [16] PFRS - 방지시설 정상여부 관계정보 변경 요청 (N개 가변관계 구조)
-//void Rx_Passing_16_PFRS()
-//{
-//    // 최소 고정부 크기(20바이트) 이상 수신 체크
-//    if(m_Gcmd.passingCnt >= IDX_PFRS16_6n)
-//    {
-//        strstr_n(m_Gcmd.passingBuff, strData4R,   IDX_COMM_1, LEN_COMM_1_4);
-//        strstr_n(m_Gcmd.passingBuff, strData7R,   IDX_COMM_2, LEN_COMM_2_7);
-//        strstr_n(m_Gcmd.passingBuff, strData3R,   IDX_COMM_3, LEN_COMM_3_3);
-//        strtol_n(m_Gcmd.passingBuff, &data4R,     IDX_COMM_4, LEN_COMM_4_4);
+[16] PFRS - 방지시설 정상여부 관계정보 변경 요청 (N개 가변관계 구조)
+void Rx_Passing_16_PFRS()
+{
+    // 최소 고정부 크기(20바이트) 이상 수신 체크
+    if(m_Gcmd.passingCnt >= IDX_PFRS16_6n)
+    {
+        strstr_n(m_Gcmd.passingBuff, strData4R,   IDX_COMM_1, LEN_COMM_1_4);
+        strstr_n(m_Gcmd.passingBuff, strData7R,   IDX_COMM_2, LEN_COMM_2_7);
+        strstr_n(m_Gcmd.passingBuff, strData3R,   IDX_COMM_3, LEN_COMM_3_3);
+        strtol_n(m_Gcmd.passingBuff, &data4R,     IDX_COMM_4, LEN_COMM_4_4);
 
-//        long relationCount = 0;
-//        strtol_n(m_Gcmd.passingBuff, &relationCount, IDX_PFRS16_5, LEN_PFRS16_5_2); // 관계 정보 수(N)
+        long relationCount = 0;
+        strtol_n(m_Gcmd.passingBuff, &relationCount, IDX_PFRS16_5, LEN_PFRS16_5_2); // 관계 정보 수(N)
 
-//        uint16_t variableIdx = IDX_PFRS16_6n;
+        uint16_t variableIdx = IDX_PFRS16_6n;
 
-//        for(int i = 0; i < relationCount; i++)
-//        {
-//            strstr_n(m_Gcmd.passingBuff, strArrDischarge[i], variableIdx, LEN_PFRS16_6n_5); // 배출시설코드
-//            strstr_n(m_Gcmd.passingBuff, strArrPrevent[i],   variableIdx + 5, LEN_PFRS16_7n_5); // 방지시설코드
+        for(int i = 0; i < relationCount; i++)
+        {
+            strstr_n(m_Gcmd.passingBuff, strData5R, variableIdx, LEN_PFRS16_6n_5); // 배출시설코드
+            strstr_n(m_Gcmd.passingBuff, strData5R_2, variableIdx + 5, LEN_PFRS16_7n_5); // 방지시설코드
 
-//            // 정의된 보폭 수치(10바이트)만큼 다음 항목으로 점프
-//            variableIdx += IDX_PFRS16_CYCLE;
-//        }
+            // 정의된 보폭 수치(10바이트)만큼 다음 항목으로 점프
+            variableIdx += IDX_PFRS16_CYCLE;
+        }
 
-//        // 루프 탈출 후 최종 위치의 2바이트 강제 수신 테스트 매칭
-//        strtol_n(m_Gcmd.passingBuff, &data2R, variableIdx, 2);
-//    }
-//}
+        // 루프 탈출 후 최종 위치의 2바이트 강제 수신 테스트 매칭
+        strtol_n(m_Gcmd.passingBuff, &data2R, variableIdx, 2);
+    }
+}
 // [17] PRSI - 통신서버IP 변경 요청
 void Rx_Passing_17_PRSI()
 {
