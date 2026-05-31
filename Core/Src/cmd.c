@@ -646,10 +646,10 @@ void Passing_Rx_Gateway()
 		m_Gcmd.passingCnt = m_Gcmd.rxCnt;
 		if(m_Gcmd.passingCnt == 12)
 		{
-			strtol_n(m_Gcmd.passingBuff, 0, 4);
-			strtol_n(m_Gcmd.passingBuff, 4, 5);
-			strtol_n(m_Gcmd.passingBuff, 9, 2);
-			strtol_n(m_Gcmd.passingBuff, 11, 1);
+//			strtol_n(m_Gcmd.passingBuff, 0, 4);
+//			strtol_n(m_Gcmd.passingBuff, 4, 5);
+//			strtol_n(m_Gcmd.passingBuff, 9, 2);
+//			strtol_n(m_Gcmd.passingBuff, 11, 1);
 		}
 
 
@@ -663,11 +663,11 @@ void Rx_Passing_PVER_11()
 {
     if(m_Gcmd.passingCnt == TOTAL_LEN_PVER11_REQ)
     {
-        strtol_n(m_Gcmd.passingBuff, 0, 4);
-        strtol_n(m_Gcmd.passingBuff, 4, 7);
-        strtol_n(m_Gcmd.passingBuff, 11, 3);
-        strtol_n(m_Gcmd.passingBuff, 14, 4);
-        strtol_n(m_Gcmd.passingBuff, 18, 2);
+ //       strtol_n(m_Gcmd.passingBuff, 0, 4);
+ //       strtol_n(m_Gcmd.passingBuff, 4, 7);
+  //      strtol_n(m_Gcmd.passingBuff, 11, 3);
+  //      strtol_n(m_Gcmd.passingBuff, 14, 4);
+  //      strtol_n(m_Gcmd.passingBuff, 18, 2);
     }
 
 }
