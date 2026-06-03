@@ -29,6 +29,61 @@
 #define   TOTAL_LEN_PCN2_20    20   // [20] 설정정보 요청 (바디 없음: 18 + 0 + 2) [cite: 1264]
 #define   TOTAL_LEN_PRBT22    20   // [22] GW 재기동 요청 (바디 없음: 18 + 0 + 2) [cite: 1330]
 
+//서버 rx 파싱용 ==========================
+
+
+#define  MIN_COMM_2		0
+#define  MAX_COMM_2		9999999
+#define  MIN_COMM_3		0
+#define  MAX_COMM_3		9
+
+
+#define  MIN_5_PDUH_6		2606030155
+#define  MAX_5_PDUH_6		4606030155
+#define  MIN_5_PDUH_7		2606030155
+#define  MAX_5_PDUH_7		4606030155
+
+#define  MIN_7_PFST_5		0
+#define  MAX_7_PFST_5		9999
+
+#define  MIN_9_PTIM_5_1		260603
+#define  MAX_9_PTIM_5_1		360603
+#define  MIN_9_PTIM_5_2		0
+#define  MAX_9_PTIM_5_2		240000
+
+#define  MIN_10_PUPG_5		0
+#define  MAX_10_PUPG_5		9
+#define  MIN_10_PUPG_7		0
+#define  MAX_10_PUPG_7		99999
+
+
+#define  MIN_12_PSET_5_1		260603
+#define  MAX_12_PSET_5_1		360603
+#define  MIN_12_PSET_5_2		0
+#define  MAX_12_PSET_5_2		240000
+
+#define  MIN_14_PAST_5		0
+#define  MAX_14_PAST_5		99
+#define  MIN_14_PAST_8		0.0
+#define  MAX_14_PAST_8		999.99
+#define  MIN_14_PAST_9		0
+#define  MAX_14_PAST_9		999.99
+#define  MIN_14_PAST_10		0
+#define  MAX_14_PAST_10		999.99
+
+#define  MIN_16_PFRS_5		0
+#define  MAX_16_PFRS_5		99
+
+#define  MIN_18_PDAT_5		0
+#define  MAX_18_PDAT_5		2
+
+#define  MIN_19_PODT_5		0
+#define  MAX_19_PODT_5		999
+#define  MIN_19_PODT_6		0
+#define  MAX_19_PODT_6		999
+//==========================
+
+
 #define CMD_TDAH	"TDAH"
 #define CMD_TOFH	"TOFH"
 #define CMD_TDDH	"TDDH"
@@ -137,7 +192,8 @@ typedef enum
 
 	LEN_PSEP8_5_16 = 16,
 
-	LEN_PTIM9_5_12 = 12,
+	LEN_PTIM9_5_1_6 = 6,
+    LEN_PTIM9_5_2_6 = 6,
 
 	LEN_PUPG10_5_1 = 1,
 	LEN_PUPG10_6_40 = 40,
@@ -161,7 +217,8 @@ typedef enum
 	LEN_TVER11_9_20 = 20,
 	LEN_TVER11_10_32 = 32,
 
-	LEN_PSET12_5_12 = 12,
+	LEN_PSET12_5_1_6 = 6,
+    LEN_PSET12_5_2_6 = 6,
 
 	LEN_PFCC13_5_5 = 5,
 	LEN_PFCC13_6_5 = 5,
@@ -181,7 +238,7 @@ typedef enum
 	LEN_PFRS16_6n_5 = 5,
 	LEN_PFRS16_7n_5 = 5,
 
-	LEN_PRSI17_5_16 = 16,
+	LEN_PRSI17_5_15 = 15,
 
 	LEN_PDAT18_5_1 = 1,
 
@@ -321,7 +378,8 @@ typedef enum
 	IDX_TTIM9_CRC = 18,  // ★ 헤더 직후 바로 CRC 시작
 
 	// ■ 응답 (PTIM)
-	IDX_PTIM9_5 = 18,	 // 서버시간 (12)
+	IDX_PTIM9_5_1 = 18,	 // 서버시간 (6) 내가 쪼갬
+	IDX_PTIM9_5_2 = 24,	 // 서버시간 (6) 내가 쪼갬
 	IDX_PTIM9_CRC = 30,  // ★ CRC 시작 인덱스 고정
 
 	// ========================================================================================
@@ -364,7 +422,8 @@ typedef enum
 	// ========================================================================================
 	// [12] 게이트웨이 시간 변경 요청 (PSET) - 고정 길이 구조
 	// ========================================================================================
-	IDX_PSET12_5 = 18,	 // 서버시간 (12)
+	IDX_PSET12_5_1 = 18,	 // 서버시간 (6)내가쪼갬
+	IDX_PSET12_5_2 = 24,	 // 서버시간 (6)내가쪼갬
 	IDX_PSET12_CRC = 30, // ★ CRC 시작 인덱스 고정
 
 	// ========================================================================================
@@ -411,7 +470,7 @@ typedef enum
 	// [17] 통신서버IP 변경 요청 (PRSI) - 고정 길이 구조
 	// ========================================================================================
 	IDX_PRSI17_5 = 18,	 // 암호화된 통신서버 IP (16)
-	IDX_PRSI17_CRC = 34, // ★ CRC 시작 인덱스 고정
+	IDX_PRSI17_CRC = 33, // ★ CRC 시작 인덱스 고정
 
 	// ========================================================================================
 	// [18] 자료전송모드 변경 요청 (PDAT) - 고정 길이 구조
@@ -501,7 +560,20 @@ typedef enum
 
  //   ========================================================================================
 
+   VIEW_ADD_1 = 1,
+   VIEW_ADD_2 = 2,
+   VIEW_ADD_3 = 3,
+   VIEW_ADD_4 = 4,
+   VIEW_ADD_5 = 5,
+   VIEW_ADD_6 = 6,
+   VIEW_ADD_7 = 7,
+   VIEW_ADD_8 = 8,
+   VIEW_ADD_9 = 9,
+   VIEW_ADD_10 = 10,
+   VIEW_ADD_11 = 11,
 
+   MAX_COMM_1 = 0,
+   MIN_COMM_1 = 0,
 
 } CMD_E;
 /*  			enum end  				*/
