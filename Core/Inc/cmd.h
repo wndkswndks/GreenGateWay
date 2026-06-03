@@ -29,6 +29,34 @@
 #define   TOTAL_LEN_PCN2_20    20   // [20] 설정정보 요청 (바디 없음: 18 + 0 + 2) [cite: 1264]
 #define   TOTAL_LEN_PRBT22    20   // [22] GW 재기동 요청 (바디 없음: 18 + 0 + 2) [cite: 1330]
 
+#define CMD_TDAH	"TDAH"
+#define CMD_TOFH	"TOFH"
+#define CMD_TDDH	"TDDH"
+#define CMD_TFDH	"TFDH"
+#define CMD_TDUH	"TDUH"
+#define CMD_TNOH	"TNOH"
+#define CMD_TTIM	"TTIM"
+#define CMD_TUPG	"TUPG"
+#define CMD_TVER	"TVER"
+#define CMD_TFCR	"TFCR"
+#define CMD_TCN2	"TCN2"
+
+#define	CMD_PDUH	"PDUH"
+#define	CMD_PFST	"PFST"
+#define	CMD_PSEP	"PSEP"
+#define	CMD_PTIM	"PTIM"
+#define	CMD_PUPG	"PUPG"
+#define	CMD_PVER	"PVER"
+#define	CMD_PSET	"PSET"
+#define	CMD_PFCC	"PFCC"
+#define	CMD_PAST	"PAST"
+#define	CMD_PFCR	"PFCR"
+#define	CMD_PFRS	"PFRS"
+#define	CMD_PRSI	"PRSI"
+#define	CMD_PDAT	"PDAT"
+#define	CMD_PODT	"PODT"
+#define	CMD_PCN2	"PCN2"
+#define	CMD_PRBT	"PRBT"
 
 
 /*  			define end  			*/
@@ -446,7 +474,7 @@ typedef enum
     ========================================================================================
       [1] ~ [22] 명령어별 패킷 총 길이 공식 리스트 (N = 항목 수 또는 관계 수)
     ========================================================================================
-    /*
+
     1)  TDAH    35+15N      1)
     2)  TOFH    34+8N       2)
     3)  TDDH    42+21N      3)
@@ -494,7 +522,7 @@ typedef struct
 
 typedef struct
 {
-	char facCode[5];//시설코드 [1][4][5][6]
+	char facCode[5];//시설코드 [1][4][5][6][13]
 	char measureCode;//항목코드 [1][4][5][6]
 	float measureValue;//측정값 [1][4][5]
 	uint8_t measureStatus;//자료상태 [1][4][5]
@@ -512,8 +540,9 @@ typedef struct
 
 typedef struct
 {
+
 	uint32_t workPlaceCode;//사업장코드[공통]
-	uint16_t chimneyCode;//굴뚝코드[공통]
+	char chimCode[3];//굴뚝코드[공통]
 	uint16_t allLan;//전체길이[공통]
 	char timeMode[3];//자료구분[공통][18]
 	uint32_t measureTime;//측정시간[공통] // YYMMDDhhmm
@@ -523,28 +552,40 @@ typedef struct
 	uint32_t powerOffDay;//전원단절 기준일자 yyyyMMDD[2]
 	uint16_t powerOffCnt;//전원단절 건수[2][3]
 	uint16_t powerOffTime[290];//전원단절시간 hhmm[2]
+	uint32_t closeDate;
+	uint16_t dayCnt;
 	uint16_t TDAHcnt;//TDAH건수[3]
 	uint16_t TOFHcnt;//TOFH건수[3]
 
 	uint16_t noTxTime;//미전송시간[7] hhmm
-	uint64_t passWard;//비밀번호 10자리 [8]
-	uint64_t sevrTime;// 서버시간 12자리 YYMMDDhhmmss [9][12]
+	char passWard[10];//비밀번호 10자리 [8]
 
 	uint8_t FTPtype;// [10]
 	char FTPipDomain[40]; // [10]
 	uint32_t FTPport; // [10]
 	char road[50]; //경로 // [10]
-	uint64_t FTPid; // [10]
-	uint64_t FTPpwd; // [10]
+	char FTPid[10]; // [10]
+	char FTPpwd[10]; // [10]
 	char IP[15]; // [10][11][17]
 
 	char GWip[16]; // [10][11]
 	uint8_t manuCode;// [10][11]
 	char GWmodel[20];// [10][11]
+	char fwVer[20];
 	char heshCode[32];// [10][11]
 	uint8_t protectRelyCnt;//방지시설 정상여부 관계정보수 [15][16]
 	uint16_t disposDelTime;//배출시설 가동유예시간(분)[19]
 	uint16_t protectDelTime;//방지시설 정지유예시간(분)[19]
+    char disposBuff[10][5];
+    char protectBuff[10][5];
+
+	uint8_t transferMode;//[21]
+	float valueMin;//[14]
+	float valueMax;//[14]
+	float valueSdrd;//[14]
+	uint32_t sevrTime;// 서버시간 12자리 YYMMDDhhmmss [9][12]
+    uint32_t startTime;//시작일시[5]
+    uint32_t endTime;//끝일시[5]
 } CHIMNEY_T;
 
 
