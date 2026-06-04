@@ -46,6 +46,10 @@
 #define  MIN_7_PFST_5		0
 #define  MAX_7_PFST_5		9999
 
+#define  MIN_8_PSEP_5		0
+#define  MAX_8_PSEP_5		4200000000
+
+
 #define  MIN_9_PTIM_5_1		260603
 #define  MAX_9_PTIM_5_1		360603
 #define  MIN_9_PTIM_5_2		0
@@ -112,6 +116,10 @@
 #define	CMD_PODT	"PODT"
 #define	CMD_PCN2	"PCN2"
 #define	CMD_PRBT	"PRBT"
+
+#define	TXMODE_HAF	"HAF"
+#define	TXMODE_FIV	  "FIV"
+#define	TXMODE_ALL 	"ALL"
 
 
 /*  			define end  			*/
@@ -190,7 +198,7 @@ typedef enum
 
 	LEN_PFST7_5_4 = 4,
 
-	LEN_PSEP8_5_16 = 16,
+	LEN_PSEP8_5_16 = 10,
 
 	LEN_PTIM9_5_1_6 = 6,
     LEN_PTIM9_5_2_6 = 6,
@@ -368,8 +376,8 @@ typedef enum
 	// ========================================================================================
 	// [8] 비밀번호 변경 요청 (PSEP) - 고정 길이 구조
 	// ========================================================================================
-	IDX_PSEP8_5 = 18,	 // 암호화된 비밀번호 (16)
-	IDX_PSEP8_CRC = 34,  // ★ CRC 시작 인덱스 고정
+	IDX_PSEP8_5 = 18,	 // 암호화된 비밀번호 (10)
+	IDX_PSEP8_CRC = 28,  // ★ CRC 시작 인덱스 고정
 
 	// ========================================================================================
 	// [9] 서버시간 조회 요청/응답 (TTIM / PTIM) - 고정 길이 구조
@@ -594,7 +602,7 @@ typedef struct
 
 typedef struct
 {
-	char facCode[5];//시설코드 [1][4][5][6][13]
+	uint32_t facCode;//시설코드 [1][4][5][6][13]
 	char measureCode;//항목코드 [1][4][5][6]
 	float measureValue;//측정값 [1][4][5]
 	uint8_t measureStatus;//자료상태 [1][4][5]
@@ -630,7 +638,7 @@ typedef struct
 	uint16_t TOFHcnt;//TOFH건수[3]
 
 	uint16_t noTxTime;//미전송시간[7] hhmm
-	char passWard[10];//비밀번호 10자리 [8]
+	uint32_t passWard;//비밀번호 10자리 [8]
 
 	uint8_t FTPtype;// [10]
 	char FTPipDomain[40]; // [10]
@@ -638,7 +646,7 @@ typedef struct
 	char road[50]; //경로 // [10]
 	char FTPid[10]; // [10]
 	char FTPpwd[10]; // [10]
-	char IP[15]; // [10][11][17]
+	uint8_t IP[4]; // [10][11][17]
 
 	char GWip[16]; // [10][11]
 	uint8_t manuCode;// [10][11]
@@ -648,14 +656,15 @@ typedef struct
 	uint8_t protectRelyCnt;//방지시설 정상여부 관계정보수 [15][16]
 	uint16_t disposDelTime;//배출시설 가동유예시간(분)[19]
 	uint16_t protectDelTime;//방지시설 정지유예시간(분)[19]
-    char disposBuff[10][5];
-    char protectBuff[10][5];
+    uint16_t disposBuff[10];
+    uint16_t protectBuff[10];
 
 	uint8_t transferMode;//[21]
 	float valueMin;//[14]
 	float valueMax;//[14]
 	float valueSdrd;//[14]
-	uint32_t sevrTime;// 서버시간 12자리 YYMMDDhhmmss [9][12]
+	uint32_t sevrDay; // 서버 날짜 6자리 YYMMDD
+	uint32_t sevrTime;// 서버시간 6자리 hhmmss [9][12]
     uint32_t startTime;//시작일시[5]
     uint32_t endTime;//끝일시[5]
 } CHIMNEY_T;
