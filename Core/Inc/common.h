@@ -15,6 +15,7 @@
 #include "usart.h"
 
 #include "cmd.h"
+#include "KISA_SHA256.h"
 
 
 

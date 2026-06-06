@@ -23,6 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "common.h"
 
 /* USER CODE END Includes */
 
@@ -92,6 +93,7 @@ int main(void)//
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
   Uart_Init();
+  Test_Config();//
 
   /* USER CODE END 2 */
 

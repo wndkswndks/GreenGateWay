@@ -12,6 +12,8 @@
    // ========================================================================================
         // 1. P 계열 순수 고정 길이 명령어 패킷 총 크기 (헤더 18 + 바디 + CRC 2)
         // ========================================================================================
+
+
 #define   TOTAL_LEN_PDUH5     43   // [5] ★복구: 저장자료 요청 (18 + 바디 10 + 10 + 2)
 #define   TOTAL_LEN_PFST7     24   // [7] 미전송자료 전송시간 변경 요청 (18 + 바디 4 + 2) [cite: 921]
 #define   TOTAL_LEN_PSEP8     36   // [8] 비밀번호 변경 요청 (18 + 바디 16(암호화) + 2) [cite: 952, 954]
@@ -28,6 +30,20 @@
 #define   TOTAL_LEN_PODT19    26   // [19] 유예시간 설정 변경 요청 (18 + 바디 3 + 3 + 2) [cite: 1237]
 #define   TOTAL_LEN_PCN2_20    20   // [20] 설정정보 요청 (바디 없음: 18 + 0 + 2) [cite: 1264]
 #define   TOTAL_LEN_PRBT22    20   // [22] GW 재기동 요청 (바디 없음: 18 + 0 + 2) [cite: 1330]
+
+#define   TOTAL_LEN_TDAH1(N)    	 (35+15*N)
+#define   TOTAL_LEN_TOFH2(N)    	 (34+8*N)
+#define   TOTAL_LEN_TDDH3(N)    	 (42+21*N)
+#define   TOTAL_LEN_TFDH4(N)   	     (35+15*N)
+#define   TOTAL_LEN_TDUH5(N)    	 (35+15*N)
+#define   TOTAL_LEN_TNOH6(N)    	 (35+8*N)
+#define   TOTAL_LEN_TTIM9    	 	 20
+#define   TOTAL_LEN_TUPG10   	 	 126
+#define   TOTAL_LEN_TVER11   	 	 126
+#define   TOTAL_LEN_TFCR15(N)   	 (22+10*N)
+#define   TOTAL_LEN_TFCR16(N)   	 (22+10*N)
+#define   TOTAL_LEN_TCN2_20(N)   	 (155+24*N)
+
 
 //서버 rx 파싱용 ==========================
 
@@ -695,6 +711,7 @@ typedef struct
 
 /*  			function start  		*/
 void TxTest();
+void Uart_Init();
 
 void UartRx1DataProcess();
 void UartRx2DataProcess();
@@ -703,6 +720,8 @@ void UartRx3DataProcess();
 
 /*  			function end  			*/
 void Uart_Gulobal();
+void Test_Config();
+void Testfunction();
 
 
 /*  			extern start  			*/
