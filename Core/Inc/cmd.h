@@ -117,9 +117,13 @@
 #define	CMD_PCN2	"PCN2"
 #define	CMD_PRBT	"PRBT"
 
-#define	TXMODE_HAF	"HAF"
+#define	TXMODE_HAF	 "HAF"
 #define	TXMODE_FIV	  "FIV"
 #define	TXMODE_ALL 	"ALL"
+
+#define	TXMODE_HAF_NUM      0
+#define	TXMODE_FIV_NUM	    1
+#define	TXMODE_ALL_NUM 	    2
 
 
 /*  			define end  			*/
@@ -583,6 +587,8 @@ typedef enum
    MAX_COMM_1 = 0,
    MIN_COMM_1 = 0,
 
+
+
 } CMD_E;
 /*  			enum end  				*/
 
@@ -622,9 +628,8 @@ typedef struct
 {
 
 	uint32_t workPlaceCode;//사업장코드[공통]
-	char chimCode[3];//굴뚝코드[공통]
+	uint8_t chimCode;//굴뚝코드[공통]
 	uint16_t allLan;//전체길이[공통]
-	char timeMode[3];//자료구분[공통][18]
 	uint32_t measureTime;//측정시간[공통] // YYMMDDhhmm
 	uint8_t measureQty;//항목수[1][4][5]
 	PART_T part[5];//항목
@@ -659,7 +664,7 @@ typedef struct
     uint16_t disposBuff[10];
     uint16_t protectBuff[10];
 
-	uint8_t transferMode;//[21]
+	uint8_t transferMode;//[21][공통][18]
 	float valueMin;//[14]
 	float valueMax;//[14]
 	float valueSdrd;//[14]
