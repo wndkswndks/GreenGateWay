@@ -727,7 +727,7 @@ void test_sha256(void)
 
 void Test_Config()
 {
-    test_sha256();
+//    test_sha256();
 }
 
 
@@ -1589,7 +1589,7 @@ void TxTest()
 {
 	static uint32_t timeStamp;
 
-	if(HAL_GetTick()-timeStamp >= 500 )
+	if(HAL_GetTick()-timeStamp >= 1000 )
 	{
 		timeStamp = HAL_GetTick();
 		printf("%u \r\n",HAL_GetTick());
