@@ -39,9 +39,9 @@
 
 
 #define  MIN_5_PDUH_6		2606030155
-#define  MAX_5_PDUH_6		4606030155
+#define  MAX_5_PDUH_6		4206030155
 #define  MIN_5_PDUH_7		2606030155
-#define  MAX_5_PDUH_7		4606030155
+#define  MAX_5_PDUH_7		4206030155
 
 #define  MIN_7_PFST_5		0
 #define  MAX_7_PFST_5		9999
@@ -597,7 +597,7 @@ typedef enum
 /*  			stuct start  			*/
 typedef struct
 {
-	uint8_t rxBuff[50];
+	uint8_t rxBuff[160];
 	uint8_t passingBuff[160];
 	uint8_t passingCnt;
 	uint8_t rxCnt;
@@ -609,7 +609,7 @@ typedef struct
 typedef struct
 {
 	uint32_t facCode;//시설코드 [1][4][5][6][13]
-	char measureCode;//항목코드 [1][4][5][6]
+	uint8_t itemCode;//항목코드 [1][4][5][6]
 	float measureValue;//측정값 [1][4][5]
 	uint8_t measureStatus;//자료상태 [1][4][5]
 	uint8_t operStatus;//가동상태 [1][4][5][6]
@@ -653,7 +653,7 @@ typedef struct
 	char FTPpwd[10]; // [10]
 	uint8_t IP[4]; // [10][11][17]
 
-	char GWip[16]; // [10][11]
+	uint8_t GWip[4]; // [10][11]
 	uint8_t manuCode;// [10][11]
 	char GWmodel[20];// [10][11]
 	char fwVer[20];
