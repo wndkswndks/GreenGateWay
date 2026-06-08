@@ -165,6 +165,10 @@ int SEED_CBC_Encrypt( IN BYTE *pbszUserKey, IN BYTE *pbszIV, IN BYTE *pbszPlainT
 */
 int SEED_CBC_Decrypt( IN BYTE *pbszUserKey, IN BYTE *pbszIV, IN BYTE *pbszCipherText, IN int nCipherTextLen, OUT BYTE *pbszPlainText );
 int EED_CBC_Test(void);
+int EED_CBC_Test_docu(void);
+int SEED_TestVector1_Verify(void);
+int Greenlink_EncDec_Test();
+int Greenlink_EncDec_Test_docu();
 
 #ifdef  __cplusplus
 }

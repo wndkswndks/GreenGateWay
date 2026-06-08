@@ -56,18 +56,18 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-/* ±×¸°¸µÅ© ±Ô°Ý¼­ ¿ä±¸»çÇ×: ½ÇÇàÆÄÀÏ ÇØ½ÃÄÚµå º¸°ü¿ë Àü¿ª º¯¼ö */
+/* ï¿½×¸ï¿½ï¿½ï¿½Å© ï¿½Ô°Ý¼ï¿½ ï¿½ä±¸ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ø½ï¿½ï¿½Úµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ */
 BYTE g_firmware_sha256[SHA256_DIGEST_VALUELEN];
 
-/* IAR ¸µÄ¿¿¡°Ô ÇöÀç ½ÇÇà ÆÄÀÏÀÇ ¼½¼Ç À§Ä¡¸¦ ¾Ë·Á´Þ¶ó°í ¼±¾ðÇÏ´Â ¸ÅÅ©·Î */
-#pragma section=".text"     // ÄÚµå ¿µ¿ª
-#pragma section=".rodata"   // ÀÐ±â Àü¿ë »ó¼ö ¿µ¿ª
+/* IAR ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ï¿½ï¿½ ï¿½Ë·ï¿½ï¿½Þ¶ï¿½ï¿?ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½Å©ï¿½ï¿½ */
+#pragma section=".text"     // ï¿½Úµï¿½ ï¿½ï¿½ï¿½ï¿½
+#pragma section=".rodata"   // ï¿½Ð±ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿?ï¿½ï¿½ï¿½ï¿½
 
 static SHA256_INFO s_sha_info;
 
 void Calculate_Firmware_Hash(void)
 {
-    // ³»ºÎÀÇ SHA256_INFO sha_info; ¼±¾ð¹®À» Áö¿ì°í Àü¿ª º¯¼ö¸¦ »ç¿ëÇÕ´Ï´Ù.
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ SHA256_INFO sha_info; ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿?ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Õ´Ï´ï¿?
 
     uint8_t *text_start   = (uint8_t *)__section_begin(".text");
     uint8_t *text_end     = (uint8_t *)__section_end(".text");
@@ -77,7 +77,7 @@ void Calculate_Firmware_Hash(void)
     uint32_t text_size   = (uint32_t)text_end - (uint32_t)text_start;
     uint32_t rodata_size = (uint32_t)rodata_end - (uint32_t)rodata_start;
 
-    // ±¸Á¶Ã¼ º¯¼ö¸í¸¸ s_sha_info·Î ¸ÅÄª
+    // ï¿½ï¿½ï¿½ï¿½Ã¼ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ s_sha_infoï¿½ï¿½ ï¿½ï¿½Äª
     SHA256_Init(&s_sha_info);
 
     if (text_size > 0)
@@ -98,32 +98,32 @@ void Calculate_Firmware_Hash(void)
 {
     SHA256_INFO sha_info;
 
-    // IAR ¼¼±×¸ÕÆ® ½ÃÀÛ/³¡ ÁÖ¼Ò ÃßÃâ
+    // IAR ï¿½ï¿½ï¿½×¸ï¿½Æ® ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½ ï¿½Ö¼ï¿½ ï¿½ï¿½ï¿½ï¿½
     uint8_t *text_start   = (uint8_t *)__section_begin(".text");
     uint8_t *text_end     = (uint8_t *)__section_end(".text");
     uint8_t *rodata_start = (uint8_t *)__section_begin(".rodata");
     uint8_t *rodata_end   = (uint8_t *)__section_end(".rodata");
 
-    // °¢ ¼½¼ÇÀÇ ½ÇÁ¦ Å©±â °è»ê
+    // ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Å©ï¿½ï¿½ ï¿½ï¿½ï¿?
     uint32_t text_size   = (uint32_t)text_end - (uint32_t)text_start;
     uint32_t rodata_size = (uint32_t)rodata_end - (uint32_t)rodata_start;
 
-    // 1. SHA-256 ±¸Á¶Ã¼ ÃÊ±âÈ­ (KISA API)
+    // 1. SHA-256 ï¿½ï¿½ï¿½ï¿½Ã¼ ï¿½Ê±ï¿½È­ (KISA API)
     SHA256_Init(&sha_info);
 
-    // 2. ½ÇÇàÆÄÀÏ ÄÚµå ¿µ¿ª(.text) ´©Àû ¿¬»ê
+    // 2. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½ ï¿½ï¿½ï¿½ï¿½(.text) ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     if (text_size > 0)
     {
         SHA256_Process(&sha_info, (const BYTE *)text_start, text_size);
     }
 
-    // 3. ½ÇÇàÆÄÀÏ »ó¼ö ¿µ¿ª(.rodata) ´©Àû ¿¬»ê
+    // 3. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿?ï¿½ï¿½ï¿½ï¿½(.rodata) ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     if (rodata_size > 0)
     {
         SHA256_Process(&sha_info, (const BYTE *)rodata_start, rodata_size);
     }
 
-    // 4. ÃÖÁ¾ ÇØ½Ã°ª ¸¶°¨ ¹× Àü¿ª º¯¼ö¿¡ ÀúÀå (KISA API)
+    // 4. ï¿½ï¿½ï¿½ï¿½ ï¿½Ø½Ã°ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (KISA API)
     SHA256_Close(&sha_info, g_firmware_sha256);
 }
 #endif
@@ -168,11 +168,13 @@ int main(void)
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  /* [Ãß°¡] ºÎÆÃ Á÷ÈÄ ÃÖÃÊ 1È¸ ¸ÞÀÎ ½ÇÇà ÆÄÀÏ ¿µ¿ªÀÇ ÇØ½ÃÄÚµå ½Ç½Ã°£ ¿¬»ê */
+  /* [ï¿½ß°ï¿½] ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ 1È¸ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ø½ï¿½ï¿½Úµï¿½ ï¿½Ç½Ã°ï¿½ ï¿½ï¿½ï¿½ï¿½ */
   Calculate_Firmware_Hash();
 
-  /* ÀÌÁ¦ g_firmware_sha256 Àü¿ª º¯¼ö ¹è¿­¿¡ °íÀ¯ ÇØ½Ã 32¹ÙÀÌÆ®°¡ ÀåÂøµÇ¾ú½À´Ï´Ù. */
-  /* ÀÌ °ªÀº ÇÁ·Î±×·¥ ÄÚµå¸¦ ´Ü 1±ÛÀÚ¶óµµ ¼öÁ¤ÇÏ°í ´Ù½Ã ºôµåÇÏ¸é ¾Ë¾Æ¼­ º¯ÇÕ´Ï´Ù. */
+  /* ï¿½ï¿½ï¿½ï¿½ g_firmware_sha256 ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½è¿­ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ø½ï¿½ 32ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ç¾ï¿½ï¿½ï¿½ï¿½Ï´ï¿½. */
+  /* ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Î±×·ï¿½ ï¿½Úµå¸¦ ï¿½ï¿½ 1ï¿½ï¿½ï¿½Ú¶ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½ ï¿½Ù½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ ï¿½Ë¾Æ¼ï¿½ ï¿½ï¿½ï¿½Õ´Ï´ï¿½. */
+//  SEED_TestVector1_Verify();
+  Greenlink_EncDec_Test_docuTest1();
 
   Uart_Init();
   Test_Config();//
