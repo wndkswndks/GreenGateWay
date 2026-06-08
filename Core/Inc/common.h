@@ -16,7 +16,7 @@
 
 #include "cmd.h"
 #include "KISA_SHA256.h"
-
+#include "KISA_SEED_CBC.h"
 
 
 /*  			include end  			*/
