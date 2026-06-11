@@ -18,7 +18,7 @@
 #define   TOTAL_LEN_PFST7     24   // [7] 미전송자료 전송시간 변경 요청 (18 + 바디 4 + 2) [cite: 921]
 #define   TOTAL_LEN_PSEP8     36   // [8] 비밀번호 변경 요청 (18 + 바디 16(암호화) + 2) [cite: 952, 954]
 #define   TOTAL_LEN_PTIM9     32   // [9] 서버시간 응답 (18 + 바디 12 + 2) [cite: 983]
-#define   TOTAL_LEN_PUPG10    151  // [10] GW 업그레이드 요청 (18 + 바디 131(암호화) + 2) [cite: 1006, 1013]
+#define   TOTAL_LEN_PUPG10    164  // [10] GW 업그레이드 요청 (18 + 바디 131(암호화) + 2) [cite: 1006, 1013]
 #define   TOTAL_LEN_PVER11    20   // [11] 버전정보 요청 (바디 없음: 18 + 0 + 2) [cite: 1045]
 #define   TOTAL_LEN_PSET12    32   // [12] GW 시간 변경 요청 (18 + 바디 12 + 2) [cite: 1070]
 #define   TOTAL_LEN_PFCC13    30   // [13] 시설코드 변경 요청 (18 + 바디 5 + 5 + 2) [cite: 1097]
@@ -43,6 +43,14 @@
 #define   TOTAL_LEN_TFCR15(N)   	 (22+10*N)
 #define   TOTAL_LEN_TFCR16(N)   	 (22+10*N)
 #define   TOTAL_LEN_TCN2_20(N)   	 (155+24*N)
+
+//YYYYMMDD
+#define	MAKE_YY(T)      ((T)/10000)%100 // YY
+#define	MAKE_MM(T)      ((T)/100)%100 // MM
+#define	MAKE_DD(T)      (T)%100 // DD
+
+
+
 
 
 //서버 rx 파싱용 ==========================
@@ -141,6 +149,10 @@
 #define	TXMODE_FIV_NUM	    1
 #define	TXMODE_ALL_NUM 	    2
 
+#define	MSG_ACK      0x06
+#define	MSG_NAK      0x15
+#define	MSG_EOT      0x04
+
 
 /*  			define end  			*/
 
@@ -218,10 +230,14 @@ typedef enum
 
 	LEN_PFST7_5_4 = 4,
 
-	LEN_PSEP8_5_16 = 10,
+	LEN_PSEP8_5_16_RAW = 16,
+    LEN_PSEP8_5_10 = 10,
 
 	LEN_PTIM9_5_1_6 = 6,
     LEN_PTIM9_5_2_6 = 6,
+
+    LEN_PUPG10_5_144_RAW = 144,
+    LEN_PUPG10_5_131 = 131,
 
 	LEN_PUPG10_5_1 = 1,
 	LEN_PUPG10_6_40 = 40,
@@ -266,6 +282,7 @@ typedef enum
 	LEN_PFRS16_6n_5 = 5,
 	LEN_PFRS16_7n_5 = 5,
 
+    LEN_PRSI17_5_16_RAW = 16,
 	LEN_PRSI17_5_15 = 15,
 
 	LEN_PDAT18_5_1 = 1,
@@ -279,7 +296,8 @@ typedef enum
 	LEN_TCN2_21_8_20 = 20,
 	LEN_TCN2_21_9_20 = 20,
 	LEN_TCN2_21_10_32 = 32,
-	LEN_TCN2_21_11_16 = 16,
+	LEN_TCN2_21_11_16_RAW = 16,
+	LEN_TCN2_21_11_10 = 10,
 	LEN_TCN2_21_12_4 = 4,
 	LEN_TCN2_21_13_1 = 1,
 	LEN_TCN2_21_14_3 = 3,
@@ -396,8 +414,8 @@ typedef enum
 	// ========================================================================================
 	// [8] 비밀번호 변경 요청 (PSEP) - 고정 길이 구조
 	// ========================================================================================
-	IDX_PSEP8_5 = 18,	 // 암호화된 비밀번호 (10)
-	IDX_PSEP8_CRC = 28,  // ★ CRC 시작 인덱스 고정
+	IDX_PSEP8_5 = 18,	 // 암호화된 비밀번호 (16)
+	IDX_PSEP8_CRC = 34,  // ★ CRC 시작 인덱스 고정
 
 	// ========================================================================================
 	// [9] 서버시간 조회 요청/응답 (TTIM / PTIM) - 고정 길이 구조
@@ -414,14 +432,16 @@ typedef enum
 	// [10] 게이트웨이 업그레이드 요청/결과 전송 (PUPG / TUPG) - 고정 길이 구조
 	// ========================================================================================
 	// ■ 요청 (PUPG) *평문 규격 기준 고정 길이
-	IDX_PUPG10_5 = 18,	 // FTP 타입 (1)
-	IDX_PUPG10_6 = 19,	 // FTP IP/Domain (40)
-	IDX_PUPG10_7 = 59,	 // FTP Port (5)
-	IDX_PUPG10_8 = 64,	 // 경로 (50)
-	IDX_PUPG10_9 = 114,  // FTP ID (10)
-	IDX_PUPG10_10 = 124, // FTP PWD (10)
-	IDX_PUPG10_11 = 134, // 통신서버 IP (15)
-	IDX_PUPG10_CRC = 149, // ★ CRC 시작 인덱스 고정
+    IDX_PUPG10_5_RAW = 18,   //
+
+	IDX_PUPG10_5 = 0,	 // FTP 타입 (1)
+	IDX_PUPG10_6 = 1,	 // FTP IP/Domain (40)
+	IDX_PUPG10_7 = 41,	 // FTP Port (5)
+	IDX_PUPG10_8 = 46,	 // 경로 (50)
+	IDX_PUPG10_9 = 96,  // FTP ID (10)
+	IDX_PUPG10_10 = 106, // FTP PWD (10)
+	IDX_PUPG10_11 = 116, // 통신서버 IP (15)
+	IDX_PUPG10_CRC = 162, // ★ CRC 시작 인덱스 고정 +13 = 144
 
 	// ■ 결과 전송 (TUPG)
 	IDX_TUPG10_5 = 18,	 // 통신 서버 IP (16)
@@ -587,22 +607,51 @@ typedef enum
     */
 
  //   ========================================================================================
+// RX DEBUG============
+    VIEW_ADD_1 = 1,
+    VIEW_ADD_2 = 2,
+    VIEW_ADD_3 = 3,
+    VIEW_ADD_4 = 4,
+    VIEW_ADD_5 = 5,
+    VIEW_ADD_6 = 6,
+    VIEW_ADD_7 = 7,
+    VIEW_ADD_8 = 8,
+    VIEW_ADD_9 = 9,
+    VIEW_ADD_10 = 10,
+    VIEW_ADD_11 = 11,
 
-   VIEW_ADD_1 = 1,
-   VIEW_ADD_2 = 2,
-   VIEW_ADD_3 = 3,
-   VIEW_ADD_4 = 4,
-   VIEW_ADD_5 = 5,
-   VIEW_ADD_6 = 6,
-   VIEW_ADD_7 = 7,
-   VIEW_ADD_8 = 8,
-   VIEW_ADD_9 = 9,
-   VIEW_ADD_10 = 10,
-   VIEW_ADD_11 = 11,
+    MAX_COMM_1 = 0,
+    MIN_COMM_1 = 0,
+//ID===================
+    ID_TDAH_1  = 1,
+    ID_TOFH_2  = 2,
+    ID_TDDH_3  = 3,
+    ID_TFDH_4  = 4,
+    ID_TDUH_5  = 5,
+    ID_TNOH_6  = 6,
+    ID_TTIM_9  = 7,
+    ID_TUPG_10 = 8,
+    ID_TVER_11 = 9,
+    ID_TFCR_15 = 10,
+    ID_TFCR_16 = 11,
+    ID_TCN2_20 = 12,
 
-   MAX_COMM_1 = 0,
-   MIN_COMM_1 = 0,
-
+    ID_PDUH_5  = 13,
+    ID_PFST_7  = 14,
+    ID_PSEP_8  = 15,
+    ID_PTIM_9  = 16,
+    ID_PUPG_10 = 17,
+    ID_PVER_11 = 18,
+    ID_PSET_12 = 19,
+    ID_PFCC_13 = 20,
+    ID_PAST_14 = 21,
+    ID_PFCR_15 = 22,
+    ID_PFRS_16 = 23,
+    ID_PRSI_17 = 24,
+    ID_PDAT_18 = 25,
+    ID_PODT_19 = 26,
+    ID_PCN2_20  = 27,
+    ID_PRBT_22 = 28,
 
 
 } CMD_E;
@@ -617,8 +666,11 @@ typedef struct
 	uint8_t passingBuff[160];
 	uint8_t passingCnt;
 	uint8_t rxCnt;
+	uint8_t txCnt;
 	uint32_t timeStamp;
+	uint8_t eotTx;
 	char txAllBuff[40];
+	uint8_t ID;
 }CMD_T;
 
 

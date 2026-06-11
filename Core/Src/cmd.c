@@ -142,6 +142,25 @@ static unsigned short crctable[256] = {
 0x6e17, 0x7e36, 0x4e55, 0x5e74, 0x2e93, 0x3eb2, 0x0ed1, 0x1ef0
 };
 
+void TX_ACK()
+{
+    uint8_t msg[1] = MSG_ACK;
+    HAL_UART_Transmit(&huart1,msg,1,100);
+    printf("ACK\r\n");
+}
+void TX_NAK()
+{
+    uint8_t msg[1] = MSG_NAK;
+    HAL_UART_Transmit(&huart1,msg,1,100);
+    printf("NAK\r\n");
+}
+void TX_EOT()
+{
+    uint8_t msg[1] = MSG_EOT;
+    HAL_UART_Transmit(&huart1,msg,1,100);
+    printf("EOT\r\n");
+}
+
 
 // 반환값을 없애고(void) 직접 버퍼에 씁니다.
 void append_crc16(uint8_t *buff, uint16_t idx)
@@ -232,8 +251,7 @@ void TxStr_Item_Code_Input(char* debugStr, uint16_t idx, uint16_t fixLen, uint32
     memcpy(txAllBuff + idx, str, 1);
     printf("%s\r\n",str);
 }
-
-void TxStr_IP_Input(char* debugStr, uint16_t idx, uint16_t fixLen, uint8_t* buff)
+void TxStr_IP_Input_org(char* debugStr, uint16_t idx, uint16_t fixLen, uint8_t* buff)
 {
     char str[16] = {0};
     printf("%s ->",debugStr);
@@ -241,6 +259,36 @@ void TxStr_IP_Input(char* debugStr, uint16_t idx, uint16_t fixLen, uint8_t* buff
              buff[0], buff[1], buff[2], buff[3]);
 
     memcpy(txAllBuff + idx, str, fixLen);  // 점 포함 15바이트 (널 제외)
+    printf("%s\r\n",str);
+}
+
+void TxStr_IP_Input(char* debugStr, uint16_t idx, uint16_t fixLen, uint8_t* buff)
+{
+    char str[16] = {0};
+    uint8_t encryBuff[16] = {0,};
+    printf("%s ->",debugStr);
+    snprintf(str, sizeof(str), "%03u.%03u.%03u.%03u",
+             buff[0], buff[1], buff[2], buff[3]);
+
+    Greenlink_Encrypt((uint8_t*)str, 15, encryBuff);
+
+    memcpy(txAllBuff + idx, encryBuff, fixLen);  // 점 포함 15바이트 (널 제외)
+    printf("%s\r\n",str);
+}
+void TxStr_PW_Input(char* debugStr, uint16_t idx, uint16_t fixLen, uint32_t data)
+{
+    char str[16] = {0};
+    uint8_t encryBuff[16] = {0,};
+	int len = 0, termLen = 0;
+
+    printf("%s ->",debugStr);
+
+	len = snprintf(str, sizeof(str), "%d",data);
+
+
+    Greenlink_Encrypt((uint8_t*)str, LEN_TCN2_21_11_10, encryBuff);
+
+    memcpy(txAllBuff + idx, encryBuff, fixLen);  // 점 포함 15바이트 (널 제외)
     printf("%s\r\n",str);
 }
 
@@ -345,6 +393,7 @@ void TxStr_Str_Input(char* debugStr, uint16_t idx, uint16_t fixLen, char* str )
 // ========================================================================================
 void Tx_1_TDAH(uint8_t ch)
 {
+
 	// 공통 헤더
 	TxStr_Str_Input("cmd",          IDX_COMM_1,      LEN_COMM_1_4,      CMD_TDAH);
 	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      m_ch[ch].workPlaceCode);
@@ -373,9 +422,10 @@ void Tx_1_TDAH(uint8_t ch)
 	// 테일러 (CRC)
 	uint16_t crcidx = (chimNum - 1) * IDX_TDAH1_CYCLE + IDX_TDAH1_13n + LEN_TDAH1_13n_1;
     append_crc16(txAllBuff, crcidx);
-    uint16_t txCnt = crcidx+2;
-	HAL_UART_Transmit(&huart1, (uint8_t*)txAllBuff, txCnt, 100);
+    m_Gcmd.txCnt = crcidx+2;
+	HAL_UART_Transmit(&huart1, (uint8_t*)txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
+	m_Gcmd.ID = ID_TDAH_1;
 }
 
 // ========================================================================================
@@ -383,6 +433,7 @@ void Tx_1_TDAH(uint8_t ch)
 // ========================================================================================
 void Tx_2_TOFH(uint8_t ch)
 {
+
 	// 공통 헤더
 	TxStr_Str_Input("cmd",            IDX_COMM_1,    LEN_COMM_1_4,      CMD_TOFH);
 	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      m_ch[ch].workPlaceCode);
@@ -406,9 +457,10 @@ void Tx_2_TOFH(uint8_t ch)
 	// 테일러 (CRC)
 	uint16_t crcidx = (chimNum - 1) * IDX_TOFH2_CYCLE + IDX_TOFH2_8n + LEN_TOFH2_8n_4;
     append_crc16(txAllBuff, crcidx);
-    uint16_t txCnt = crcidx+2;
-	HAL_UART_Transmit(&huart1, (uint8_t*)txAllBuff, txCnt, 100);
+    m_Gcmd.txCnt = crcidx+2;
+	HAL_UART_Transmit(&huart1, (uint8_t*)txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
+	m_Gcmd.ID = ID_TOFH_2;
 }
 
 // ========================================================================================
@@ -416,6 +468,7 @@ void Tx_2_TOFH(uint8_t ch)
 // ========================================================================================
 void Tx_3_TDDH(uint8_t ch)
 {
+
 	// 공통 헤더
 	TxStr_Str_Input("cmd",            IDX_COMM_1,    LEN_COMM_1_4,      CMD_TDDH);
 	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      m_ch[ch].workPlaceCode);
@@ -448,9 +501,10 @@ void Tx_3_TDDH(uint8_t ch)
 	// 테일러 (CRC)
 	uint16_t crcidx = (chimNum - 1) * IDX_TDDH3_CYCLE + IDX_TDDH3_17n + LEN_TDDH3_17n_3;
     append_crc16(txAllBuff, crcidx);
-    uint16_t txCnt = crcidx+2;
-	HAL_UART_Transmit(&huart1, txAllBuff, txCnt, 100);
+    m_Gcmd.txCnt = crcidx+2;
+	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
+	m_Gcmd.ID = ID_TDDH_3;
 }
 
 // ========================================================================================
@@ -458,6 +512,7 @@ void Tx_3_TDDH(uint8_t ch)
 // ========================================================================================
 void Tx_4_TFDH(uint8_t ch)
 {
+
 	// 공통 헤더
 	TxStr_Str_Input("cmd",            IDX_COMM_1,    LEN_COMM_1_4,      CMD_TFDH);
 	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      m_ch[ch].workPlaceCode);
@@ -486,9 +541,10 @@ void Tx_4_TFDH(uint8_t ch)
 	// 테일러 (CRC)
 	uint16_t crcidx = (chimNum - 1) * IDX_TFDH4_CYCLE + IDX_TFDH4_13n + LEN_TFDH4_13n_1;
     append_crc16(txAllBuff, crcidx);
-    uint16_t txCnt = crcidx+2;
-	HAL_UART_Transmit(&huart1, txAllBuff, txCnt, 100);
+    m_Gcmd.txCnt = crcidx+2;
+	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
+	m_Gcmd.ID = ID_TFDH_4;
 }
 
 // ========================================================================================
@@ -496,6 +552,7 @@ void Tx_4_TFDH(uint8_t ch)
 // ========================================================================================
 void Tx_5_TDUH(uint8_t ch)
 {
+
 	// 공통 헤더
 	TxStr_Str_Input("cmd",            IDX_COMM_1,    LEN_COMM_1_4,      CMD_TDUH);
 	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      m_ch[ch].workPlaceCode);
@@ -524,9 +581,10 @@ void Tx_5_TDUH(uint8_t ch)
 	// 테일러 (CRC)
 	uint16_t crcidx = (chimNum - 1) * IDX_TDUH5_CYCLE + IDX_TDUH5_13n + LEN_TDUH5_13n_1;
     append_crc16(txAllBuff, crcidx);
-    uint16_t txCnt = crcidx+2;
-	HAL_UART_Transmit(&huart1, txAllBuff, txCnt, 100);
+    m_Gcmd.txCnt = crcidx+2;
+	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
+	m_Gcmd.ID = ID_TDUH_5;
 }
 
 // ========================================================================================
@@ -534,6 +592,7 @@ void Tx_5_TDUH(uint8_t ch)
 // ========================================================================================
 void Tx_6_TNOH(uint8_t ch)
 {
+
 	// 공통 헤더
 	TxStr_Str_Input("cmd",            IDX_COMM_1,    LEN_COMM_1_4,      CMD_TNOH);
 	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      m_ch[ch].workPlaceCode);
@@ -560,9 +619,10 @@ void Tx_6_TNOH(uint8_t ch)
 	// 테일러 (CRC)
 	uint16_t crcidx = (chimNum - 1) * IDX_TNOH6_CYCLE + IDX_TNOH6_11n + LEN_TNOH6_11n_1;
     append_crc16(txAllBuff, crcidx);
-    uint16_t txCnt = crcidx+2;
-	HAL_UART_Transmit(&huart1, txAllBuff, txCnt, 100);
+    m_Gcmd.txCnt = crcidx+2;
+	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
+	m_Gcmd.ID = ID_TNOH_6;
 }
 
 // ========================================================================================
@@ -570,6 +630,7 @@ void Tx_6_TNOH(uint8_t ch)
 // ========================================================================================
 void Tx_9_TTIM(uint8_t ch)
 {
+
 	// 공통 헤더
 	TxStr_Str_Input("cmd",            IDX_COMM_1,    LEN_COMM_1_4,      CMD_TTIM);
 	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      m_ch[ch].workPlaceCode);
@@ -577,9 +638,10 @@ void Tx_9_TTIM(uint8_t ch)
 	TxStr_Int_Input("allLan",         IDX_COMM_4,    LEN_COMM_4_4,      TOTAL_LEN_TTIM9);
 
     append_crc16(txAllBuff, IDX_TTIM9_CRC);
-    uint16_t txCnt = IDX_TTIM9_CRC+2;
-	HAL_UART_Transmit(&huart1, txAllBuff, txCnt, 100);
+    m_Gcmd.txCnt = IDX_TTIM9_CRC+2;
+	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
+	m_Gcmd.ID = ID_TTIM_9;
 }
 
 // ========================================================================================
@@ -602,9 +664,10 @@ void Tx_10_TUPG(uint8_t ch)
 	TxStr_Str_Input("heshCode",    IDX_TUPG10_10,  LEN_TUPG10_10_32,  m_ch[ch].heshCode);
     append_crc16(txAllBuff, IDX_TUPG10_CRC);
 
-    uint16_t txCnt = IDX_TUPG10_CRC+2;
-	HAL_UART_Transmit(&huart1, txAllBuff, txCnt, 100);
+    m_Gcmd.txCnt = IDX_TUPG10_CRC+2;
+	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
+	m_Gcmd.ID = ID_TUPG_10;
 }
 
 // ========================================================================================
@@ -626,9 +689,10 @@ void Tx_11_TVER(uint8_t ch)
 	TxStr_Str_Input("fwVer",       IDX_TVER11_9,   LEN_TVER11_9_20,  m_ch[ch].fwVer);
 	TxStr_Str_Input("heshCode",    IDX_TVER11_10,  LEN_TVER11_10_32,  m_ch[ch].heshCode);
 	append_crc16(txAllBuff, IDX_TVER11_CRC);
-    uint16_t txCnt = IDX_TVER11_CRC+2;
-	HAL_UART_Transmit(&huart1, txAllBuff, txCnt, 100);
+    m_Gcmd.txCnt = IDX_TVER11_CRC+2;
+	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
+	m_Gcmd.ID = ID_TVER_11;
 }
 
 // ========================================================================================
@@ -658,9 +722,10 @@ void Tx_15_TFCR(uint8_t ch)
 	// 테일러 (CRC)
 	uint16_t crcidx = (chimNum - 1) * IDX_TFCR15_CYCLE + IDX_TFCR15_7n + LEN_TFCR15_7n_5;
     append_crc16(txAllBuff, crcidx);
-    uint16_t txCnt = crcidx+2;
-	HAL_UART_Transmit(&huart1, txAllBuff, txCnt, 100);
+    m_Gcmd.txCnt = crcidx+2;
+	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
+	m_Gcmd.ID = ID_TFCR_15;
 }
 
 // ========================================================================================
@@ -682,7 +747,7 @@ void Tx_21_TCN2(uint8_t ch)
 	TxStr_Str_Input("GWmodel",     IDX_TCN2_21_8,   LEN_TCN2_21_8_20,  m_ch[ch].GWmodel);
 	TxStr_Str_Input("fwVer",       IDX_TCN2_21_9,   LEN_TCN2_21_9_20,  m_ch[ch].fwVer);
 	TxStr_Str_Input("heshCode",    IDX_TCN2_21_10,  LEN_TCN2_21_10_32, m_ch[ch].heshCode);
-	TxStr_Int_Input("passWard",    IDX_TCN2_21_11,  LEN_TCN2_21_11_16, m_ch[ch].passWard);
+	TxStr_PW_Input("passWard",    IDX_TCN2_21_11,  LEN_TCN2_21_11_16_RAW, m_ch[ch].passWard);
 	TxStr_Int_Input("noTxTime",    IDX_TCN2_21_12,  LEN_TCN2_21_12_4,  m_ch[ch].noTxTime);
 	TxStr_Int_Input("transferMode",  IDX_TCN2_21_13,  LEN_TCN2_21_13_1,  m_ch[ch].transferMode);
 	TxStr_Int_Input("disposDelTime",    IDX_TCN2_21_14,  LEN_TCN2_21_14_3,  m_ch[ch].disposDelTime);
@@ -701,13 +766,13 @@ void Tx_21_TCN2(uint8_t ch)
 		TxStr_float_Input("valueMax",   commIdx + IDX_TCN2_21_20n, LEN_TCN2_21_20_6n, m_ch[ch].valueMax);
 		TxStr_float_Input("valueSdrd",  commIdx + IDX_TCN2_21_21n, LEN_TCN2_21_21_6n, m_ch[ch].valueSdrd);
 	}
-
 	// 테일러 (CRC)
 	uint16_t crcidx = (chimNum - 1) * IDX_TCN2_21_CYCLE + IDX_TCN2_21_21n + LEN_TCN2_21_21_6n;
     append_crc16(txAllBuff, crcidx);
-    uint16_t txCnt = crcidx+2;
-	HAL_UART_Transmit(&huart1, txAllBuff, txCnt, 100);
+    m_Gcmd.txCnt = crcidx+2;
+	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
+	m_Gcmd.ID = ID_TCN2_20;
 }
 
 
@@ -924,7 +989,7 @@ uint8_t Check_IP_Code(const uint8_t *str,  uint8_t* IPbuff, uint16_t idx, uint8_
         return 1;
     }
 
-    memcpy(strTemp, (char*)str+idx, 15);
+    memcpy(strTemp, (char*)str+idx, LEN_PRSI17_5_15);
     strTemp[15] = '\0';
 
     uint8_t tempbuff[4] = {0,};
@@ -960,6 +1025,47 @@ uint8_t Check_IP_Code(const uint8_t *str,  uint8_t* IPbuff, uint16_t idx, uint8_
 
 }
 
+void Rx_Passing_ACK()
+{
+    memset(txAllBuff, 0, sizeof(txAllBuff));
+    m_Gcmd.txCnt = 0;
+    m_Gcmd.eotTx = 0;
+
+    TX_EOT();
+
+}
+void Rx_Passing_NAK()
+{
+    if(!m_Gcmd.eotTx)
+    {
+        HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
+        m_Gcmd.eotTx = 1;
+    }
+    else
+    {
+        memset(txAllBuff, 0, sizeof(txAllBuff));
+        // 미전송데이터 라즈베리파이에 저장하고
+        m_Gcmd.txCnt = 0;
+        m_Gcmd.eotTx = 0;
+        TX_EOT();
+    }
+
+
+}
+void Rx_Passing_EOT()// 내가 서버로부터 바디가 있는 데이터를 받았을때만 해당
+{
+
+}
+
+void WakeUp_TOFH_2_Config(uint32_t startDay, uint32_t endDay)
+{
+
+}
+
+
+
+
+
 void Rx_Passing_5_PDUH()
 {
 
@@ -986,6 +1092,9 @@ void Rx_Passing_5_PDUH()
         printf("startTime %u \r\n",chkBuff[0]);
         m_ch[ch].endTime = chkBuff[1];
         printf("endTime %u \r\n",chkBuff[1]);
+
+        TX_ACK();
+        m_Gcmd.ID = ID_PDUH_5;
     }
     else
     {
@@ -1014,6 +1123,8 @@ void Rx_Passing_7_PFST()
 
         m_ch[ch].noTxTime = chkBuff[0];
         printf("noTxTime %u \r\n",chkBuff[0]);
+        TX_ACK();
+        m_Gcmd.ID = ID_PFST_7;
 
     }
     else
@@ -1026,6 +1137,8 @@ void Rx_Passing_8_PSEP()
 {
     uint32_t tempData = 0;
     uint32_t chkBuff[1] = {0,};
+    uint8_t tempBuff[16] = {0,};
+    uint8_t passWard[10] = {0,};
     uint32_t ch = 0;
 
     printf("RX_8_PSEP \r\n");
@@ -1034,12 +1147,20 @@ void Rx_Passing_8_PSEP()
         if(strtol_n(m_Gcmd.passingBuff, &tempData, IDX_COMM_2, LEN_COMM_2_7, MIN_COMM_2, MAX_COMM_2, VIEW_ADD_1))return;
         if(strtol_n(m_Gcmd.passingBuff, &ch, IDX_COMM_3, LEN_COMM_3_3, MIN_COMM_3, MAX_COMM_3, VIEW_ADD_2))return;
         if(strtol_n(m_Gcmd.passingBuff, &tempData, IDX_COMM_4, LEN_COMM_4_4, TOTAL_LEN_PSEP8, TOTAL_LEN_PSEP8, VIEW_ADD_3))return;
-        if(strtol_n(m_Gcmd.passingBuff, chkBuff, IDX_PSEP8_5, LEN_PSEP8_5_16, MIN_8_PSEP_5, MAX_8_PSEP_5, VIEW_ADD_4))return; // 암호화 패스워드 //u32에 맞게
+
+        memcpy(tempBuff, m_Gcmd.passingBuff+IDX_PSEP8_5, 16);
+        Greenlink_Decrypt(tempBuff, passWard, LEN_PSEP8_5_16_RAW ,LEN_PSEP8_5_10);
+
+        if(strtol_n(passWard, chkBuff, 0, LEN_PSEP8_5_10, MIN_8_PSEP_5, MAX_8_PSEP_5, VIEW_ADD_4))return; // 암호화 패스워드 //u32에 맞게
+
+
         if(Check_crc16(m_Gcmd.passingBuff, IDX_PSEP8_CRC))return;
         printf("> OK\r\n");
 
         m_ch[ch].passWard = chkBuff[0];
         printf("passWard %u \r\n",chkBuff[0]);
+        TX_ACK();
+        m_Gcmd.ID = ID_PSEP_8;
     }
     else
     {
@@ -1070,6 +1191,8 @@ void Rx_Passing_9_PTIM()
         printf("sevrDay %u \r\n",chkBuff[0]);
         m_ch[ch].sevrTime = chkBuff[1];
         printf("sevrTime %u \r\n",chkBuff[1]);
+        TX_ACK();
+        m_Gcmd.ID = ID_PTIM_9;
     }
     else
     {
@@ -1082,6 +1205,8 @@ void Rx_Passing_10_PUPG()
 {
     uint32_t tempData = 0;
     uint8_t tempIpBuff[4] = {0,};
+    uint8_t inBuff[144] = {0,};
+    uint8_t outBuff[131] = {0,};
     uint32_t chkBuff[5] = {0,};
     uint32_t ch = 0;
 
@@ -1092,15 +1217,17 @@ void Rx_Passing_10_PUPG()
         if(strtol_n(m_Gcmd.passingBuff, &ch, IDX_COMM_3, LEN_COMM_3_3, MIN_COMM_3, MAX_COMM_3, VIEW_ADD_2))return;
         if(strtol_n(m_Gcmd.passingBuff, &tempData, IDX_COMM_4, LEN_COMM_4_4, TOTAL_LEN_PUPG10, TOTAL_LEN_PUPG10, VIEW_ADD_3))return;
 
-        if(strtol_n(m_Gcmd.passingBuff, chkBuff, IDX_PUPG10_5, LEN_PUPG10_5_1, MIN_10_PUPG_5, MAX_10_PUPG_5, VIEW_ADD_4))return;   // FTP 타입
+        memcpy(inBuff, m_Gcmd.passingBuff+IDX_PUPG10_5_RAW, LEN_PUPG10_5_144_RAW);
+        Greenlink_Decrypt(inBuff, outBuff, LEN_PUPG10_5_144_RAW ,LEN_PUPG10_5_131);
 
-        strstr_n(m_Gcmd.passingBuff, strData40R, IDX_PUPG10_6, LEN_PUPG10_6_40);  // FTP IP/Domain
 
-        if(strtol_n(m_Gcmd.passingBuff, chkBuff+1, IDX_PUPG10_7, LEN_PUPG10_7_5, MIN_10_PUPG_7, MAX_10_PUPG_7, VIEW_ADD_6))return;   // FTP Port
-        strstr_n(m_Gcmd.passingBuff, strData50R,  IDX_PUPG10_8, LEN_PUPG10_8_50);  // 파일 경로
-        strstr_n(m_Gcmd.passingBuff, strData10R, IDX_PUPG10_9, LEN_PUPG10_9_10);  // FTP ID
-        strstr_n(m_Gcmd.passingBuff, strData10R_2, IDX_PUPG10_10, LEN_PUPG10_10_10);// FTP PWD
-        if(Check_IP_Code(m_Gcmd.passingBuff, tempIpBuff, IDX_PUPG10_11, VIEW_ADD_10))return;
+        if(strtol_n(outBuff, chkBuff, IDX_PUPG10_5, LEN_PUPG10_5_1, MIN_10_PUPG_5, MAX_10_PUPG_5, VIEW_ADD_4))return;   // FTP 타입
+        strstr_n(outBuff, strData40R, IDX_PUPG10_6, LEN_PUPG10_6_40);  // FTP IP/Domain
+        if(strtol_n(outBuff, chkBuff+1, IDX_PUPG10_7, LEN_PUPG10_7_5, MIN_10_PUPG_7, MAX_10_PUPG_7, VIEW_ADD_6))return;   // FTP Port
+        strstr_n(outBuff, strData50R, IDX_PUPG10_8, LEN_PUPG10_8_50);  // 파일 경로
+        strstr_n(outBuff, strData10R, IDX_PUPG10_9, LEN_PUPG10_9_10);  // FTP ID
+        strstr_n(outBuff, strData10R_2, IDX_PUPG10_10, LEN_PUPG10_10_10);// FTP PWD
+        if(Check_IP_Code(outBuff, tempIpBuff, IDX_PUPG10_11, VIEW_ADD_10))return;
 
         if(Check_crc16(m_Gcmd.passingBuff, IDX_PUPG10_CRC))return;
         printf("> OK\r\n");
@@ -1118,6 +1245,10 @@ void Rx_Passing_10_PUPG()
         printf("FTPid %s \r\n",strData10R);
         memcpy(m_ch[ch].FTPpwd, strData10R_2, LEN_PUPG10_10_10);
         printf("FTPpwd %s \r\n",strData10R_2);
+        memcpy(m_ch[ch].IP, tempIpBuff, 4);
+        printf("%hhu.%hhu.%hhu.%hhu \r\n",tempIpBuff[0], tempIpBuff[1], tempIpBuff[2], tempIpBuff[3]);
+        TX_ACK();
+        m_Gcmd.ID = ID_PUPG_10;
 
 
     }
@@ -1143,6 +1274,9 @@ void Rx_Passing_11_PVER()
         if(Check_crc16(m_Gcmd.passingBuff, IDX_PVER11_CRC))return;
 
         printf("> OK\r\n");
+
+        Tx_11_TVER(ch);
+        m_Gcmd.ID = ID_PVER_11;
     }
     else
     {
@@ -1173,6 +1307,8 @@ void Rx_Passing_12_PSET()
         printf("sevrDay %u \r\n",chkBuff[0]);
         m_ch[ch].sevrTime = chkBuff[1];
         printf("sevrTime %u \r\n",chkBuff[1]);
+        TX_ACK();
+        m_Gcmd.ID = ID_PSET_12;
     }
     else
     {
@@ -1213,6 +1349,8 @@ void Rx_Passing_13_PFCC()
                  break;
             }
         }
+        TX_ACK();
+        m_Gcmd.ID = ID_PFCC_13;
     }
     else
     {
@@ -1261,6 +1399,7 @@ void Rx_Passing_14_PAST()
         // 루프 탈출 후 최종 위치의 2바이트 강제 수신 테스트 매칭
         if(Check_crc16(m_Gcmd.passingBuff, variableIdx))return;
         printf("> OK\r\n");
+        m_Gcmd.ID = ID_PAST_14;
 
 
         for(int i = 0; i < itemCount; i++)
@@ -1276,6 +1415,7 @@ void Rx_Passing_14_PAST()
                 m_ch[ch].part[i].measureStandard = chkBuff_F[i][2];
                 printf("measureStandard %f \r\n",chkBuff_F[i][2]);
         }
+        TX_ACK();
     }
 }
 // [15] PFCR - 관계정보 조회 요청
@@ -1293,6 +1433,9 @@ void Rx_Passing_15_PFCR()
 
         if(Check_crc16(m_Gcmd.passingBuff, IDX_PFCR15_CRC))return;
         printf("> OK\r\n");
+
+        Tx_15_TFCR(ch);
+        m_Gcmd.ID = ID_PFCR_15;
     }
     else
     {
@@ -1339,6 +1482,8 @@ void Rx_Passing_16_PFRS()
             m_ch[ch].protectBuff[i] = chkBuff[i][1];
             printf("protectBuff %u \r\n",chkBuff[i][1]);
         }
+        TX_ACK();
+        m_Gcmd.ID = ID_PFRS_16;
     }
 }
 // [17] PRSI - 통신서버IP 변경 요청
@@ -1347,6 +1492,8 @@ void Rx_Passing_17_PRSI()
 
     uint32_t tempData = 0;
     uint8_t tempIpBuff[4] = {0,};
+    uint8_t tempBuff[16] = {0,};
+    uint8_t rawIpBuff[15] = {0,};
     uint32_t ch = 0;
 
     printf("RX_17_PRSI \r\n");
@@ -1356,7 +1503,10 @@ void Rx_Passing_17_PRSI()
         if(strtol_n(m_Gcmd.passingBuff, &ch, IDX_COMM_3, LEN_COMM_3_3, MIN_COMM_3, MAX_COMM_3, VIEW_ADD_2))return;
         if(strtol_n(m_Gcmd.passingBuff, &tempData, IDX_COMM_4, LEN_COMM_4_4, TOTAL_LEN_PRSI17, TOTAL_LEN_PRSI17, VIEW_ADD_3))return;
 
-        if(Check_IP_Code(m_Gcmd.passingBuff, tempIpBuff, IDX_PRSI17_5, VIEW_ADD_10))return;
+        memcpy(tempBuff, m_Gcmd.passingBuff+IDX_PRSI17_5, 16);
+        Greenlink_Decrypt(tempBuff, rawIpBuff, LEN_PRSI17_5_16_RAW ,LEN_PRSI17_5_15);
+
+        if(Check_IP_Code(rawIpBuff, tempIpBuff, 0, VIEW_ADD_10))return;
 
         if(Check_crc16(m_Gcmd.passingBuff, IDX_PRSI17_CRC))return;
          printf("> OK\r\n");
@@ -1367,6 +1517,8 @@ void Rx_Passing_17_PRSI()
          {
             printf("%hhu.\r\n",tempIpBuff[i]);
          }
+         TX_ACK();
+         m_Gcmd.ID = ID_PRSI_17;
     }
     else
     {
@@ -1395,6 +1547,8 @@ void Rx_Passing_18_PDAT()
 
         m_ch[ch].transferMode = chkBuff[0];
         printf("transferMode %u \r\n",chkBuff[0]);
+        TX_ACK();
+        m_Gcmd.ID = ID_PDAT_18;
     }
     else
     {
@@ -1426,6 +1580,8 @@ void Rx_Passing_19_PODT()
         printf("disposDelTime %u \r\n",chkBuff[0]);
         m_ch[ch].protectDelTime = chkBuff[1];
         printf("protectDelTime %u \r\n",chkBuff[1]);
+        TX_ACK();
+        m_Gcmd.ID = ID_PODT_19;
     }
     else
     {
@@ -1445,6 +1601,7 @@ void Rx_Passing_20_PCN2()
         if(strtol_n(m_Gcmd.passingBuff, &tempData, IDX_COMM_4, LEN_COMM_4_4, TOTAL_LEN_PCN2_20, TOTAL_LEN_PCN2_20, VIEW_ADD_3))return;
         if(Check_crc16(m_Gcmd.passingBuff, IDX_PCN220_CRC))return;
         printf("> OK\r\n");
+        m_Gcmd.ID = ID_PCN2_20;
     }
     else
     {
@@ -1466,6 +1623,8 @@ void Rx_Passing_22_PRBT()
         if(strtol_n(m_Gcmd.passingBuff, &tempData, IDX_COMM_4, LEN_COMM_4_4, TOTAL_LEN_PRBT22, TOTAL_LEN_PRBT22, VIEW_ADD_3))return;
         if(Check_crc16(m_Gcmd.passingBuff, IDX_PRBT22_CRC))return;
         printf("> OK\r\n");
+        TX_ACK();
+        m_Gcmd.ID = ID_PRBT_22;
     }
     else
     {
@@ -1497,11 +1656,12 @@ void Passing_Rx_Gateway()//
         else if(strncmp((char*)m_Gcmd.passingBuff, CMD_PODT, 4) == 0){Rx_Passing_19_PODT();}
         else if(strncmp((char*)m_Gcmd.passingBuff, CMD_PCN2, 4) == 0){Rx_Passing_20_PCN2();}
         else if(strncmp((char*)m_Gcmd.passingBuff, CMD_PRBT, 4) == 0){Rx_Passing_22_PRBT();}
+        else if(m_Gcmd.passingBuff[0] == MSG_ACK && m_Gcmd.passingCnt == 1)Rx_Passing_ACK();
+        else if(m_Gcmd.passingBuff[0] == MSG_NAK && m_Gcmd.passingCnt == 1)Rx_Passing_NAK();
+        else if(m_Gcmd.passingBuff[0] == MSG_EOT && m_Gcmd.passingCnt == 1)Rx_Passing_EOT();
 
-
-
-
-
+        memset(m_Gcmd.passingBuff, 0, sizeof(m_Gcmd.passingBuff));
+        m_Gcmd.passingCnt = 0;
 		m_Gcmd.timeStamp = 0;
 		m_Gcmd.rxCnt = 0;
 	}

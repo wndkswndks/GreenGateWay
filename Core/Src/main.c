@@ -93,40 +93,7 @@ void Calculate_Firmware_Hash(void)
     SHA256_Close(&s_sha_info, g_firmware_sha256);
 }
 
-#if 0
-void Calculate_Firmware_Hash(void)
-{
-    SHA256_INFO sha_info;
 
-    // IAR ���׸�Ʈ ����/�� �ּ� ����
-    uint8_t *text_start   = (uint8_t *)__section_begin(".text");
-    uint8_t *text_end     = (uint8_t *)__section_end(".text");
-    uint8_t *rodata_start = (uint8_t *)__section_begin(".rodata");
-    uint8_t *rodata_end   = (uint8_t *)__section_end(".rodata");
-
-    // �� ������ ���� ũ�� ���?
-    uint32_t text_size   = (uint32_t)text_end - (uint32_t)text_start;
-    uint32_t rodata_size = (uint32_t)rodata_end - (uint32_t)rodata_start;
-
-    // 1. SHA-256 ����ü �ʱ�ȭ (KISA API)
-    SHA256_Init(&sha_info);
-
-    // 2. �������� �ڵ� ����(.text) ���� ����
-    if (text_size > 0)
-    {
-        SHA256_Process(&sha_info, (const BYTE *)text_start, text_size);
-    }
-
-    // 3. �������� ���?����(.rodata) ���� ����
-    if (rodata_size > 0)
-    {
-        SHA256_Process(&sha_info, (const BYTE *)rodata_start, rodata_size);
-    }
-
-    // 4. ���� �ؽð� ���� �� ���� ������ ���� (KISA API)
-    SHA256_Close(&sha_info, g_firmware_sha256);
-}
-#endif
 
 
 
@@ -174,7 +141,7 @@ int main(void)
   /* ���� g_firmware_sha256 ���� ���� �迭�� ���� �ؽ� 32����Ʈ�� �����Ǿ����ϴ�. */
   /* �� ���� ���α׷� �ڵ带 �� 1���ڶ� �����ϰ� �ٽ� �����ϸ� �˾Ƽ� ���մϴ�. */
 //  SEED_TestVector1_Verify();
-  Greenlink_EncDec_Test_docuTest1();
+  Greenlink_EncDec_Test();
 
   Uart_Init();
   Test_Config();//

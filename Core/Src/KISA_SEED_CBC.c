@@ -343,46 +343,48 @@ void KISA_SEED_Decrypt_Block_forCBC( unsigned int *in, unsigned int *out, KISA_S
     out[3] = L1;
 }
 
+
+
+static DWORD g_chartoint32_buf[40] = {0,};
+
 DWORD* chartoint32_for_SEED_CBC( IN BYTE *in, IN int nLen )
 {
-	unsigned int *data;
-	int len,i;
+    int len, i;
+    if(nLen % 4)
+        len = (nLen/4)+1;
+    else
+        len = (nLen/4);
 
-	if(nLen % 4)
-		len = (nLen/4)+1;
-	else
-		len = (nLen/4);
+    memset(g_chartoint32_buf, 0x00, sizeof(g_chartoint32_buf));
 
-	data = malloc(sizeof(unsigned int) * len);
-
-	for(i=0;i<len;i++)
-	{
-		data[i] = ((unsigned int*)in)[i];
-	}
-
-	return data;
+    for(i=0; i<len; i++)
+    {
+        g_chartoint32_buf[i] = ((unsigned int*)in)[i];
+    }
+    return g_chartoint32_buf;
 }
+
+/* int32tochar 전용 전역 버퍼: BYTE 타입, 160byte */
+static BYTE g_int32tochar_buf[160] = {0,};
 
 BYTE* int32tochar_for_SEED_CBC( IN DWORD *in, IN int nLen )
 {
-	unsigned char *data;
-	int i;
+    int i;
 
-	data = malloc(sizeof(unsigned char) * nLen);
+    memset(g_int32tochar_buf, 0x00, sizeof(g_int32tochar_buf));
 
 #ifdef LITTLE_ENDIAN
-	for(i=0;i<nLen;i++)
-	{
-		data[i] = (unsigned char)(in[i/4] >> ((i%4)*8));
-	}
+    for(i=0; i<nLen; i++)
+    {
+        g_int32tochar_buf[i] = (unsigned char)(in[i/4] >> ((i%4)*8));
+    }
 #else
-	for(i=0;i<nLen;i++)
-	{
-		data[i] = (unsigned char)(in[i/4] >> ((3-(i%4))*8));
-	}
+    for(i=0; i<nLen; i++)
+    {
+        g_int32tochar_buf[i] = (unsigned char)(in[i/4] >> ((3-(i%4))*8));
+    }
 #endif
-
-	return data;
+    return g_int32tochar_buf;
 }
 
 int SEED_CBC_init( OUT KISA_SEED_INFO *pInfo, IN KISA_ENC_DEC enc, IN BYTE *pbszUserKey, IN BYTE *pbszIV )
@@ -545,40 +547,37 @@ int SEED_CBC_Close( OUT KISA_SEED_INFO *pInfo, IN DWORD *out, IN int *outLen )
 	return 1;
 }
 
-int SEED_CBC_Encrypt( IN BYTE *pbszUserKey, IN BYTE *pbszIV, IN BYTE *pbszPlainText, IN int nPlainTextLen, OUT BYTE *pbszCipherText )
+
+int SEED_CBC_Encrypt( IN BYTE *pbszUserKey, IN BYTE *pbszIV,IN BYTE *pbszPlainText, IN int nPlainTextLen,OUT BYTE *pbszCipherText )
 {
-	KISA_SEED_INFO info;
-	unsigned int *outbuf;
-	unsigned int *data;
-	unsigned char *newpbszPlainText;
-	unsigned char *cdata;
-	int outlen = 0;
-	int nRetOutLeng = 0;
-	int nPaddingLeng = 0;
-	int i;
-	int nPlainTextPadding = (BLOCK_SIZE_SEED - (nPlainTextLen % BLOCK_SIZE_SEED));
-	newpbszPlainText = malloc(sizeof(unsigned char) * (nPlainTextLen + nPlainTextPadding));
-	memcpy(newpbszPlainText, pbszPlainText, nPlainTextLen);
+    KISA_SEED_INFO info;
+    unsigned int  outbuf[40]           = {0,};  /* 40 DWORD = 160 byte */
+    unsigned int  *data;
+    unsigned char newpbszPlainText[160] = {0,};
+    unsigned char *cdata;
+    int outlen       = 0;
+    int nRetOutLeng  = 0;
+    int nPaddingLeng = 0;
+    int nPlainTextPadding = (BLOCK_SIZE_SEED - (nPlainTextLen % BLOCK_SIZE_SEED));
 
-	SEED_CBC_init( &info, KISA_ENCRYPT, pbszUserKey, pbszIV );
+    memcpy(newpbszPlainText, pbszPlainText, nPlainTextLen);
 
-	outlen = ((nPlainTextLen/16) + 1) *4 ;
-	outbuf = malloc(sizeof(unsigned int) * outlen);
+    SEED_CBC_init(&info, KISA_ENCRYPT, pbszUserKey, pbszIV);
 
-	data = chartoint32_for_SEED_CBC(newpbszPlainText, nPlainTextLen);
-	SEED_CBC_Process( &info, data, nPlainTextLen, outbuf, &nRetOutLeng );
+    outlen = ((nPlainTextLen/16) + 1) * 4;
 
-	SEED_CBC_Close( &info, outbuf + (nRetOutLeng)/4, &nPaddingLeng );
+    data  = chartoint32_for_SEED_CBC(newpbszPlainText, nPlainTextLen);
+    SEED_CBC_Process(&info, data, nPlainTextLen, outbuf, &nRetOutLeng);
+    SEED_CBC_Close(&info, outbuf + (nRetOutLeng)/4, &nPaddingLeng);
+    cdata = int32tochar_for_SEED_CBC(outbuf, nRetOutLeng + nPaddingLeng);
+    memcpy(pbszCipherText, cdata, nRetOutLeng + nPaddingLeng);
 
-	cdata = int32tochar_for_SEED_CBC(outbuf, nRetOutLeng + nPaddingLeng);
-	memcpy(pbszCipherText, cdata, nRetOutLeng + nPaddingLeng);
+    /* free() 전부 제거 - 전역/로컬 배열은 free 하면 안됨 */
 
-	free(data);
-	free(cdata);
-	free(outbuf);
-
-	return nRetOutLeng+nPaddingLeng;
+    return nRetOutLeng + nPaddingLeng;
 }
+
+
 //
 int SEED_CBC_Decrypt( IN BYTE *pbszUserKey, IN BYTE *pbszIV, IN BYTE *pbszCipherText, IN int nCipherTextLen, OUT BYTE *result )
 {
@@ -1289,7 +1288,7 @@ static const BYTE SEED_IV[16] = {
  * @param  cipher_out : 암호문 출력 버퍼 (반드시 32바이트 이상)
  * @return 유효 암호문 길이 (항상 16)
  */
-int Greenlink_Encrypt(const BYTE *plain, int plain_len, BYTE *cipher_out)
+int Greenlink_Encrypt_org(const BYTE *plain, int plain_len, BYTE *cipher_out)
 {
     BYTE padded[16] = {0x00};
 
@@ -1306,6 +1305,23 @@ int Greenlink_Encrypt(const BYTE *plain, int plain_len, BYTE *cipher_out)
     /* cipher_out[0..15] 만 유효, [16..31]은 PKCS7 블록 */
     return 16;
 }
+int Greenlink_Encrypt(const BYTE *plain, int plain_len, BYTE *cipher_out)
+{
+    BYTE padded[131] = {0x00};
+
+    if (plain == NULL || cipher_out == NULL) return 0;
+    if (plain_len > 131) plain_len = 131;
+
+    memcpy(padded, plain, plain_len);   /* Zero padding 적용 */
+
+    SEED_CBC_Encrypt((BYTE*)SEED_KEY,
+                     (BYTE*)SEED_IV,
+                     padded, plain_len,
+                     cipher_out);
+
+    /* cipher_out[0..15] 만 유효, [16..31]은 PKCS7 블록 */
+    return plain_len;
+}
 
 /**
  * @brief  패킷 필드 복호화
@@ -1319,7 +1335,8 @@ int Greenlink_Encrypt(const BYTE *plain, int plain_len, BYTE *cipher_out)
  *         데이터가 잘릴 수 있음.
  *         SEED_CBC_Process()만 호출하여 이를 방지.
  */
-int Greenlink_Decrypt(const BYTE *cipher, BYTE *plain_out)
+
+int Greenlink_Decrypt_org(const BYTE *cipher, BYTE *plain_out)
 {
     KISA_SEED_INFO info;
     DWORD  outbuf[4] = {0x00};
@@ -1340,7 +1357,6 @@ int Greenlink_Decrypt(const BYTE *cipher, BYTE *plain_out)
 
     /* 3. 복호화 (SEED_CBC_Close 호출 안 함 → PKCS7 제거 없음) */
     SEED_CBC_Process(&info, data, 16, outbuf, &outLen);
-    free(data);
 
     if (outLen != 16) return 0;
 
@@ -1349,27 +1365,60 @@ int Greenlink_Decrypt(const BYTE *cipher, BYTE *plain_out)
     if (result == NULL) return 0;
 
     memcpy(plain_out, result, 16);
-    free(result);
 
+    return 1;
+}
+int Greenlink_Decrypt(const BYTE *inBuff, BYTE *outBuff, int inLen, int outPutLen)
+{
+    KISA_SEED_INFO info;
+    DWORD  outbuf[36] = {0x00};  /* 36 x 4 = 144 byte */
+    DWORD *data       = NULL;
+    BYTE  *result     = NULL;
+    int    outLen     = 0;
+
+    if (inBuff == NULL || outBuff == NULL) return 0;
+    if (inLen <= 0 || inLen > 144)               return 0;  /* 범위 체크 */
+    if (inLen % 16 != 0)                       return 0;  /* 16배수 체크 */
+
+    /* 1. 복호화 컨텍스트 초기화 */
+    if (SEED_CBC_init(&info, KISA_DECRYPT,
+                      (BYTE*)SEED_KEY,
+                      (BYTE*)SEED_IV) == 0) return 0;
+
+    /* 2. 입력 바이트 → DWORD 변환 */
+    data = chartoint32_for_SEED_CBC((BYTE*)inBuff, inLen);
+    if (data == NULL) return 0;
+
+    /* 3. 복호화 (SEED_CBC_Close 호출 안 함 → PKCS7 제거 없음) */
+    SEED_CBC_Process(&info, data, inLen, outbuf, &outLen);
+    if (outLen != inLen) return 0;
+
+    /* 4. DWORD → 바이트 변환 */
+    result = int32tochar_for_SEED_CBC(outbuf, inLen);
+    if (result == NULL) return 0;
+
+    memcpy(outBuff, result, outPutLen);
     return 1;
 }
 
 
-BYTE cipher_out[32] = {0x00};
-BYTE plain_out[16] = {0x00};
+BYTE cipher_out[200] = {0x00};
+BYTE plain_out[200] = {0x00};
 int Greenlink_EncDec_Test()
 {
     /* 암호화 */
-    BYTE ip[15]         = "192.168.051.101";
+    BYTE ip[150]         = "Q123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890abcdefghij";
 
-    Greenlink_Encrypt(ip, 15, cipher_out);
+    Greenlink_Encrypt(ip, 131, cipher_out);
 
     /* 복호화 */
 
-    Greenlink_Decrypt(cipher_out, plain_out);
+    Greenlink_Decrypt(cipher_out, plain_out, 144 ,131);
     /* plain_out → "192.168.001.001\0" */
 
 }
+
+
 int Greenlink_EncDec_Test_docuTest1()
 {
     /* Test Vector 1번용 임시 Key/IV */
@@ -1392,6 +1441,5 @@ int Greenlink_EncDec_Test_docuTest1()
     /* cipher_out[0..15] = 5E BA C6 E0 05 4E 16 68 19 AF F1 CC 6D 34 6C DB */
 
 }
-
 
 // method 2 end
