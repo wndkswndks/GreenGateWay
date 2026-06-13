@@ -44,10 +44,12 @@
 #define   TOTAL_LEN_TFCR16(N)   	 (22+10*N)
 #define   TOTAL_LEN_TCN2_20(N)   	 (155+24*N)
 
-//YYYYMMDD
-#define	MAKE_YY(T)      ((T)/10000)%100 // YY
-#define	MAKE_MM(T)      ((T)/100)%100 // MM
-#define	MAKE_DD(T)      (T)%100 // DD
+//YYMMDDhhmm
+#define YY(T) (((T) / 100000000) % 100)
+#define MM(T) (((T) / 1000000) % 100)
+#define DD(T) (((T) / 10000) % 100)
+#define hh(T) (((T) / 100) % 100)
+#define mm(T) ((T) % 100)
 
 
 
@@ -667,7 +669,8 @@ typedef struct
 	uint8_t passingCnt;
 	uint8_t rxCnt;
 	uint8_t txCnt;
-	uint32_t timeStamp;
+	uint32_t rxTimeStamp;
+	uint32_t txTimeStamp;
 	uint8_t eotTx;
 	char txAllBuff[40];
 	uint8_t ID;

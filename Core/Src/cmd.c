@@ -426,6 +426,7 @@ void Tx_1_TDAH(uint8_t ch)
 	HAL_UART_Transmit(&huart1, (uint8_t*)txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	m_Gcmd.ID = ID_TDAH_1;
+	m_Gcmd.txTimeStamp = HAL_GetTick();
 }
 
 // ========================================================================================
@@ -461,6 +462,7 @@ void Tx_2_TOFH(uint8_t ch)
 	HAL_UART_Transmit(&huart1, (uint8_t*)txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	m_Gcmd.ID = ID_TOFH_2;
+	m_Gcmd.txTimeStamp = HAL_GetTick();
 }
 
 // ========================================================================================
@@ -505,6 +507,7 @@ void Tx_3_TDDH(uint8_t ch)
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	m_Gcmd.ID = ID_TDDH_3;
+	m_Gcmd.txTimeStamp = HAL_GetTick();
 }
 
 // ========================================================================================
@@ -545,6 +548,7 @@ void Tx_4_TFDH(uint8_t ch)
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	m_Gcmd.ID = ID_TFDH_4;
+	m_Gcmd.txTimeStamp = HAL_GetTick();
 }
 
 // ========================================================================================
@@ -585,6 +589,7 @@ void Tx_5_TDUH(uint8_t ch)
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	m_Gcmd.ID = ID_TDUH_5;
+	m_Gcmd.txTimeStamp = HAL_GetTick();
 }
 
 // ========================================================================================
@@ -623,6 +628,7 @@ void Tx_6_TNOH(uint8_t ch)
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	m_Gcmd.ID = ID_TNOH_6;
+	m_Gcmd.txTimeStamp = HAL_GetTick();
 }
 
 // ========================================================================================
@@ -642,6 +648,7 @@ void Tx_9_TTIM(uint8_t ch)
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	m_Gcmd.ID = ID_TTIM_9;
+	m_Gcmd.txTimeStamp = HAL_GetTick();
 }
 
 // ========================================================================================
@@ -668,6 +675,7 @@ void Tx_10_TUPG(uint8_t ch)
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	m_Gcmd.ID = ID_TUPG_10;
+	m_Gcmd.txTimeStamp = HAL_GetTick();
 }
 
 // ========================================================================================
@@ -693,6 +701,7 @@ void Tx_11_TVER(uint8_t ch)
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	m_Gcmd.ID = ID_TVER_11;
+	m_Gcmd.txTimeStamp = HAL_GetTick();
 }
 
 // ========================================================================================
@@ -726,6 +735,7 @@ void Tx_15_TFCR(uint8_t ch)
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	m_Gcmd.ID = ID_TFCR_15;
+	m_Gcmd.txTimeStamp = HAL_GetTick();
 }
 
 // ========================================================================================
@@ -773,6 +783,7 @@ void Tx_21_TCN2(uint8_t ch)
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	m_Gcmd.ID = ID_TCN2_20;
+	m_Gcmd.txTimeStamp = HAL_GetTick();
 }
 
 
@@ -821,6 +832,7 @@ uint8_t strtol_n(const uint8_t *str, uint32_t * data, uint16_t idx, int n,  uint
     else
     {
         printf("error \r\n");//debuge
+        TX_NAK();
         return 1;
     }
 
@@ -851,6 +863,7 @@ uint8_t strtof_n(const uint8_t *str, float* data, uint16_t idx, int n,  float mi
     else
     {
         printf("error \r\n");//debuge
+        TX_NAK();
         return 1;
     }
 
@@ -862,6 +875,8 @@ void strstr_n(const uint8_t *str, char *strDst ,uint16_t idx, int n)
 
     if (str == NULL || strDst == NULL)
     {
+        printf("error \r\n");//debuge
+        TX_NAK();
         return;
     }
 
@@ -903,6 +918,7 @@ uint8_t Check_Faci_Code(const uint8_t *str,  uint32_t* data, uint16_t idx, uint8
 
         default:
             printf("error \r\n");//debuge
+            TX_NAK();
             return 1;
         break;
     }
@@ -922,6 +938,7 @@ uint8_t Check_Faci_Code(const uint8_t *str,  uint32_t* data, uint16_t idx, uint8
     else
     {
         printf("error \r\n");//debuge
+        TX_NAK();
         return 1;
     }
 }
@@ -944,6 +961,7 @@ uint8_t Check_Item_Code(const uint8_t *str, uint32_t* data, uint16_t idx, uint8_
         case 'b': val = 6; break;
         default:
             printf("error \r\n");
+            TX_NAK();
             return 1;
     }
 
@@ -958,6 +976,7 @@ uint8_t Check_Tx_Mode_Code(const char *str, uint32_t *data, uint16_t idx, uint8_
     if (str == NULL || data == NULL)
     {
         printf("error\r\n");
+        TX_NAK();
         return 1;
     }
 
@@ -972,6 +991,7 @@ uint8_t Check_Tx_Mode_Code(const char *str, uint32_t *data, uint16_t idx, uint8_
     else
     {
         printf("error\r\n");
+        TX_NAK();
         return 1;
     }
 
@@ -986,6 +1006,8 @@ uint8_t Check_IP_Code(const uint8_t *str,  uint8_t* IPbuff, uint16_t idx, uint8_
 
     if (str == NULL)
     {
+        printf("error\r\n");
+        TX_NAK();
         return 1;
     }
 
@@ -1020,6 +1042,7 @@ uint8_t Check_IP_Code(const uint8_t *str,  uint8_t* IPbuff, uint16_t idx, uint8_
     else
     {
         printf("error \r\n");//debuge
+        TX_NAK();
         return 1;
     }
 
@@ -1057,10 +1080,102 @@ void Rx_Passing_EOT()// 내가 서버로부터 바디가 있는 데이터를 받았을때만 해당
 
 }
 
-void WakeUp_TOFH_2_Config(uint32_t startDay, uint32_t endDay)
+uint32 DAY_END(uint32 YYMMDD)
 {
+    uint32_t YY = (YYMMDD/10000)*10000;
+    uint32_t MMDD = YYMMDD/10000;
+    switch (MMDD)
+    {
+        case 131: return (YY+201); break;
+        case 228: return (YY+301); break;
+        case 331: return (YY+401); break;
+        case 430: return (YY+501); break;
+        case 531: return (YY+601); break;
+        case 630: return (YY+701); break;
+        case 731: return (YY+801); break;
+        case 831: return (YY+901); break;
+        case 930: return (YY+1001); break;
+        case 1031: return(YY+1101); break;
+        case 1130: return(YY+1201); break;
+        case 1231: return(YY+10000+101); break;
+        default: return 0; break;
+    }
+}
+
+#define MIN_60  60
+#define HOUR_1  100
+#define HOUR_24  2400
+#define YEAR_1  10000
+#define MON_1  100
+
+
+void Time_Cal_TOFH_2(uint32_t startDay, uint32_t endDay)
+{
+    //startDay, endDay : YYMMDDmmhh
+    uint16_t timeBuff[288] = {0,};
+    uint16_t timeCnt = 0;
+    for(uint32_t i =startDay ;i < endDay; i=i+5)
+    {
+        if(mm(i)==MIN_60)//60분 이면
+        {
+            i -= MIN_60;
+            i += HOUR_1;//1시간 up
+        }
+
+        timeBuff[timeCnt++] = i;
+    }
+}
+
+void Day_Cal_TOFH_2(uint32_t startDay, uint32_t endDay)
+{
+    //startDay, endDay : YYMMDDmmhh
+    uint16_t timeCnt = 0;
+    uint32_t sYY = YY(startDay);//
+    uint32_t eYY = YY(endDay);//
+    uint32_t sMM = MM(startDay);//
+    uint32_t eMM = MM(endDay);//
+    uint32_t sDD = DD(startDay);//
+    uint32_t eDD = DD(endDay);//
+    uint32_t sDay = startDay/10000;
+    uint32_t eDay = endDay/10000;
+    uint32_t Daybuff[4];
+
+
 
 }
+
+void Cal_TOFH_2(uint32_t startDay, uint32_t endDay)
+{
+    //startDay, endDay : YYMMDDmmhh
+    uint8_t DayCnt = 0;
+    uint32_t sDay = startDay/10000;
+    uint32_t eDay = endDay/10000;
+    uint32_t sTime = startDay%10000;
+    uint32_t eTime = endDay%10000;
+
+    uint16_t TimeSE[4][2]= {{0,2355},{0,2355},{0,2355},{0,2355}};
+    uint32_t DayBuff[4] = {0,};
+    uint32_t temp;
+    uint32_t yymmdd = sDay;
+
+    TimeSE[0][0] = sTime;
+    for(int i =0 ;i < 4;i++)
+    {
+        DayBuff[i] = yymmdd;
+        if(yymmdd == eDay)
+        {
+            TimeSE[i][1] = eTime;
+            DayCnt = i;
+            break;
+        }
+        temp = DAY_END(yymmdd);
+        if (temp) yymmdd = temp;
+        else yymmdd++;
+
+    }
+
+}
+
 
 
 
@@ -1095,6 +1210,7 @@ void Rx_Passing_5_PDUH()
 
         TX_ACK();
         m_Gcmd.ID = ID_PDUH_5;
+        m_Gcmd.txTimeStamp = HAL_GetTick();
     }
     else
     {
@@ -1125,6 +1241,7 @@ void Rx_Passing_7_PFST()
         printf("noTxTime %u \r\n",chkBuff[0]);
         TX_ACK();
         m_Gcmd.ID = ID_PFST_7;
+        m_Gcmd.txTimeStamp = HAL_GetTick();
 
     }
     else
@@ -1161,6 +1278,7 @@ void Rx_Passing_8_PSEP()
         printf("passWard %u \r\n",chkBuff[0]);
         TX_ACK();
         m_Gcmd.ID = ID_PSEP_8;
+        m_Gcmd.txTimeStamp = HAL_GetTick();
     }
     else
     {
@@ -1193,6 +1311,7 @@ void Rx_Passing_9_PTIM()
         printf("sevrTime %u \r\n",chkBuff[1]);
         TX_ACK();
         m_Gcmd.ID = ID_PTIM_9;
+        m_Gcmd.txTimeStamp = HAL_GetTick();
     }
     else
     {
@@ -1249,7 +1368,7 @@ void Rx_Passing_10_PUPG()
         printf("%hhu.%hhu.%hhu.%hhu \r\n",tempIpBuff[0], tempIpBuff[1], tempIpBuff[2], tempIpBuff[3]);
         TX_ACK();
         m_Gcmd.ID = ID_PUPG_10;
-
+        m_Gcmd.txTimeStamp = HAL_GetTick();
 
     }
     else
@@ -1277,6 +1396,7 @@ void Rx_Passing_11_PVER()
 
         Tx_11_TVER(ch);
         m_Gcmd.ID = ID_PVER_11;
+        m_Gcmd.txTimeStamp = HAL_GetTick();
     }
     else
     {
@@ -1309,6 +1429,7 @@ void Rx_Passing_12_PSET()
         printf("sevrTime %u \r\n",chkBuff[1]);
         TX_ACK();
         m_Gcmd.ID = ID_PSET_12;
+        m_Gcmd.txTimeStamp = HAL_GetTick();
     }
     else
     {
@@ -1351,6 +1472,7 @@ void Rx_Passing_13_PFCC()
         }
         TX_ACK();
         m_Gcmd.ID = ID_PFCC_13;
+        m_Gcmd.txTimeStamp = HAL_GetTick();
     }
     else
     {
@@ -1416,6 +1538,7 @@ void Rx_Passing_14_PAST()
                 printf("measureStandard %f \r\n",chkBuff_F[i][2]);
         }
         TX_ACK();
+        m_Gcmd.txTimeStamp = HAL_GetTick();
     }
 }
 // [15] PFCR - 관계정보 조회 요청
@@ -1436,6 +1559,7 @@ void Rx_Passing_15_PFCR()
 
         Tx_15_TFCR(ch);
         m_Gcmd.ID = ID_PFCR_15;
+        m_Gcmd.txTimeStamp = HAL_GetTick();
     }
     else
     {
@@ -1484,6 +1608,7 @@ void Rx_Passing_16_PFRS()
         }
         TX_ACK();
         m_Gcmd.ID = ID_PFRS_16;
+        m_Gcmd.txTimeStamp = HAL_GetTick();
     }
 }
 // [17] PRSI - 통신서버IP 변경 요청
@@ -1519,6 +1644,7 @@ void Rx_Passing_17_PRSI()
          }
          TX_ACK();
          m_Gcmd.ID = ID_PRSI_17;
+         m_Gcmd.txTimeStamp = HAL_GetTick();
     }
     else
     {
@@ -1549,6 +1675,7 @@ void Rx_Passing_18_PDAT()
         printf("transferMode %u \r\n",chkBuff[0]);
         TX_ACK();
         m_Gcmd.ID = ID_PDAT_18;
+        m_Gcmd.txTimeStamp = HAL_GetTick();
     }
     else
     {
@@ -1582,6 +1709,7 @@ void Rx_Passing_19_PODT()
         printf("protectDelTime %u \r\n",chkBuff[1]);
         TX_ACK();
         m_Gcmd.ID = ID_PODT_19;
+        m_Gcmd.txTimeStamp = HAL_GetTick();
     }
     else
     {
@@ -1602,6 +1730,7 @@ void Rx_Passing_20_PCN2()
         if(Check_crc16(m_Gcmd.passingBuff, IDX_PCN220_CRC))return;
         printf("> OK\r\n");
         m_Gcmd.ID = ID_PCN2_20;
+        m_Gcmd.txTimeStamp = HAL_GetTick();
     }
     else
     {
@@ -1625,6 +1754,7 @@ void Rx_Passing_22_PRBT()
         printf("> OK\r\n");
         TX_ACK();
         m_Gcmd.ID = ID_PRBT_22;
+        m_Gcmd.txTimeStamp = HAL_GetTick();
     }
     else
     {
@@ -1632,9 +1762,52 @@ void Rx_Passing_22_PRBT()
     }
 }
 
+void CallBack_TimeOut_Check()
+{
+    if(m_Gcmd.txTimeStamp && HAL_GetTick() - m_Gcmd.txTimeStamp > 30000)
+    {
+        printf("TimeOut \r\n");
+        switch (m_Gcmd.ID)
+        {
+            case ID_TDAH_1 : printf("TDAH_1 ");	break;
+            case ID_TOFH_2 : printf("TOFH_2 ");	break;
+            case ID_TDDH_3 : printf("TDDH_3 ");	break;
+            case ID_TFDH_4 : printf("TFDH_4 ");	break;
+            case ID_TDUH_5 : printf("TDUH_5 ");	break;
+            case ID_TNOH_6 : printf("TNOH_6 ");	break;
+            case ID_TTIM_9 : printf("TTIM_9 ");	break;
+            case ID_TUPG_10: printf("TUPG_10");	break;
+            case ID_TVER_11: printf("TVER_11");	break;
+            case ID_TFCR_15: printf("TFCR_15");	break;
+            case ID_TFCR_16: printf("TFCR_16");	break;
+            case ID_TCN2_20: printf("TCN2_20");	break;
+            case ID_PDUH_5 : printf("PDUH_5 ");	break;
+            case ID_PFST_7 : printf("PFST_7 ");	break;
+            case ID_PSEP_8 : printf("PSEP_8 ");	break;
+            case ID_PTIM_9 : printf("PTIM_9 ");	break;
+            case ID_PUPG_10: printf("PUPG_10");	break;
+            case ID_PVER_11: printf("PVER_11");	break;
+            case ID_PSET_12: printf("PSET_12");	break;
+            case ID_PFCC_13: printf("PFCC_13");	break;
+            case ID_PAST_14: printf("PAST_14");	break;
+            case ID_PFCR_15: printf("PFCR_15");	break;
+            case ID_PFRS_16: printf("PFRS_16");	break;
+            case ID_PRSI_17: printf("PRSI_17");	break;
+            case ID_PDAT_18: printf("PDAT_18");	break;
+            case ID_PODT_19: printf("PODT_19");	break;
+            case ID_PCN2_20: printf("PCN2_20");	break;
+            case ID_PRBT_22: printf("PRBT_22");	break;
+            q
+            qqq
+
+
+        }
+        m_Gcmd.txTimeStamp = 0;
+    }
+}
 void Passing_Rx_Gateway()//
 {
-	if(HAL_GetTick() - m_Gcmd.timeStamp>30 && m_Gcmd.timeStamp)
+	if(HAL_GetTick() - m_Gcmd.rxTimeStamp>30 && m_Gcmd.rxTimeStamp)
 	{
 		memcpy(m_Gcmd.passingBuff, m_Gcmd.rxBuff, m_Gcmd.rxCnt);
 		memset(m_Gcmd.rxBuff, 0, sizeof(m_Gcmd.rxBuff));
@@ -1662,7 +1835,7 @@ void Passing_Rx_Gateway()//
 
         memset(m_Gcmd.passingBuff, 0, sizeof(m_Gcmd.passingBuff));
         m_Gcmd.passingCnt = 0;
-		m_Gcmd.timeStamp = 0;
+		m_Gcmd.rxTimeStamp = 0;
 		m_Gcmd.rxCnt = 0;
 	}
 }
@@ -1671,7 +1844,7 @@ void Rx_Gateway_Config(uint8_t rxData)
 {
 	m_Gcmd.rxBuff[m_Gcmd.rxCnt++] = rxData;
 	m_Gcmd.rxCnt %= 50;
-	m_Gcmd.timeStamp = HAL_GetTick();
+	m_Gcmd.rxTimeStamp = HAL_GetTick();
 }
 
 
