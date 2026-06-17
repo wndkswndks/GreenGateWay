@@ -142,27 +142,67 @@ static unsigned short crctable[256] = {
 0x6e17, 0x7e36, 0x4e55, 0x5e74, 0x2e93, 0x3eb2, 0x0ed1, 0x1ef0
 };
 
-void TX_ACK()
+
+
+void Save_30Day_1_TDAH_Fail()
+{
+
+}
+
+void Save_30Day_1_TDAH()
+{
+
+}
+void Save_30Day_2_TOFH()
+{
+
+}
+void Save_30Day_3_TDDH()
+{
+
+}
+void Save_30Day_6_TNOH()
+{
+
+}
+
+void TX_ACK(uint8_t cmd)
 {
     uint8_t msg[1] = MSG_ACK;
     HAL_UART_Transmit(&huart1,msg,1,100);
     printf("ACK\r\n");
+
+	m_Gcmd.ID = cmd;
     m_Gcmd.txAckTimeStamp = HAL_GetTick();
     m_Gcmd.txAckFlag = 1;
 }
 void ACK_ReSend()
 {
+	uint8_t msg[1] = MSG_ACK;
 	if(m_Gcmd.txAckFlag)
 	{
 		if(HAL_GetTick() - m_Gcmd.txAckTimeStamp>30000 )
 		{
-			uint8_t msg[1] = MSG_ACK;
-			HAL_UART_Transmit(&huart1,msg,1,100);
-			printf("ACK\r\n");
-			m_Gcmd.txAckFlag = 0;
 
+			switch (m_Gcmd.stepNoneAck)
+			{
+				case STEP0:
+					HAL_UART_Transmit(&huart1,msg,1,100);
+					printf("ACK\r\n");
+					m_Gcmd.stepNoneAck = STEP1;
+				break;
+
+				case STEP1://미송신
+					m_Gcmd.txAckFlag = 0;
+					m_Gcmd.ID = 0;
+					m_Gcmd.stepNoneAck = STEP0;
+				break;
+			}
+			m_Gcmd.txAckTimeStamp = HAL_GetTick();
 		}
 	}
+
+
 }
 void TxMsg_ReSend()
 {
@@ -170,7 +210,26 @@ void TxMsg_ReSend()
 	{
 		if(HAL_GetTick() - m_Gcmd.txMsgTimeStamp>30000 )
 		{
-			m_Gcmd.txCmd = m_Gcmd.ID;
+
+			switch (m_Gcmd.stepNoneMsg)
+			{
+				case STEP0:
+					m_Gcmd.txCmd = m_Gcmd.ID;
+					m_Gcmd.stepNoneMsg = STEP1;
+				break;
+
+				case STEP1://미송신
+					if(m_Gcmd.ID == ID_TDAH_1)
+					{
+						//미송신 데이터 SD CARD 저장
+						Save_30Day_1_TDAH_Fail();
+					}
+					m_Gcmd.txMsgFlag = 0;
+					m_Gcmd.ID = 0;
+					m_Gcmd.stepNoneMsg = STEP0;
+				break;
+			}
+			m_Gcmd.txMsgTimeStamp = HAL_GetTick();
 		}
 	}
 }
@@ -194,7 +253,107 @@ void TX_Memo(uint8_t cmd)
 	m_Gcmd.txMsgFlag = 1;
 }
 
-// 반환값을 없애고(void) 직접 버퍼에 씁니다.
+void Rx_Passing_ACK()
+{
+	switch (m_Gcmd.ID)
+	{
+		case ID_TOFH_2:
+			m_Gcmd.TOFH_2_Ack = 1;
+		break;
+
+		case ID_TDDH_3:
+			m_Gcmd.TDDH_3_Ack = 1;
+		break;
+
+		case ID_TFDH_4:
+			m_Gcmd.TFDH_4_Ack = 1;
+		break;
+
+		case ID_TDUH_5:
+			m_Gcmd.TDUH_5_Ack = 1;
+		break;
+
+		case ID_TDAH_1 :
+		case ID_TNOH_6 :
+		case ID_TUPG_10:
+		case ID_TVER_11:
+		case ID_TFCR_15:
+		case ID_TFCR_16:
+		case ID_TCN2_20:
+			TX_EOT();
+		break;
+
+
+	}
+	m_Gcmd.ID = 0;
+	m_Gcmd.txMsgFlag = 0;
+
+
+	m_Gcmd.stepNoneAck = STEP0;
+	m_Gcmd.stepNoneMsg = STEP0;
+	m_Gcmd.stepNoneNck = STEP0;
+
+}
+void Rx_Passing_NAK()
+{
+	if(m_Gcmd.txMsgFlag)
+	{
+		switch (m_Gcmd.stepNoneNck)
+		{
+			case STEP0:
+				m_Gcmd.txCmd = m_Gcmd.ID;
+				m_Gcmd.stepNoneNck = STEP1;
+			break;
+
+			case STEP1://미송신
+				if(m_Gcmd.ID == ID_TDAH_1)
+				{
+					//미송신 데이터 SD CARD 저장
+					Save_30Day_1_TDAH_Fail();
+				}
+				m_Gcmd.txMsgFlag = 0;
+				m_Gcmd.ID = 0;
+				m_Gcmd.stepNoneNck = STEP0;
+			break;
+		}
+	}
+
+	m_Gcmd.txCmd = m_Gcmd.ID;
+}
+void Rx_Passing_EOT()// 내가 서버로부터 바디가 있는 데이터를 받았을때만 해당
+{
+	m_Gcmd.txAckFlag = 0;
+	switch (m_Gcmd.ID)
+	{
+	    case ID_PFST_7 ://TCN2
+	    case ID_PSEP_8 ://TCN2
+	    case ID_PFCC_13://TCN2
+	    case ID_PAST_14://TCN2
+	    case ID_PRSI_17://TCN2
+	    case ID_PDAT_18://TCN2
+	    case ID_PODT_19://TCN2
+	    case ID_PCN2_20://TCN2
+	    case ID_PRBT_22://TCN2
+			m_Gcmd.txCmd = ID_TCN2_20;
+		break;
+
+	    case ID_PTIM_9 ://END
+	    case ID_PSET_12://END
+			//notting
+		break;
+
+	    case ID_PUPG_10://PUPG
+			m_Gcmd.txCmd = ID_TUPG_10;
+		break;
+	    case ID_PFRS_16://TFCR
+			m_Gcmd.txCmd = ID_TFCR_16;
+		break;
+
+	}
+	m_Gcmd.ID = 0;
+}
+
+
 void append_crc16(uint8_t *buff, uint16_t idx)
 {
     uint16_t crc = CRC16_INIT_VALUE; // 0xFFFF
@@ -233,6 +392,7 @@ uint8_t Check_crc16(uint8_t *buff, uint16_t idx)
         return 1;
     }
 }
+
 
 
 void TxAllBuff_Clear()
@@ -428,6 +588,8 @@ void TxStr_Str_Input(char* debugStr, uint16_t idx, uint16_t fixLen, char* str )
 }
 
 
+
+
 // ========================================================================================
 // [1] 측정자료 전송 (TDAH) - 가변 구조
 // ========================================================================================
@@ -466,6 +628,7 @@ void Tx_1_TDAH(uint8_t ch)
 	HAL_UART_Transmit(&huart1, (uint8_t*)txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	TX_Memo(ID_TDAH_1);
+	Save_30Day_1_TDAH();
 
 }
 
@@ -506,8 +669,8 @@ void Tx_2_TOFH(uint8_t ch, uint32_t pwOffDay, uint16_t startTime, uint16_t endTi
     append_crc16(txAllBuff, crcidx);
     m_Gcmd.txCnt = crcidx+2;
 	HAL_UART_Transmit(&huart1, (uint8_t*)txAllBuff, m_Gcmd.txCnt, 100);
+	Save_30Day_2_TOFH();
 	printf("> END \r\n");
-	TX_Memo(ID_TOFH_2);
 }
 
 
@@ -553,6 +716,7 @@ void Tx_3_TDDH(uint8_t ch)
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	TX_Memo(ID_TDDH_3);
+	Save_30Day_3_TDDH();
 }
 
 // ========================================================================================
@@ -671,6 +835,7 @@ void Tx_6_TNOH(uint8_t ch)
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	TX_Memo(ID_TNOH_6);
+	Save_30Day_6_TNOH();
 }
 
 // ========================================================================================
@@ -1085,62 +1250,6 @@ uint8_t Check_IP_Code(const uint8_t *str,  uint8_t* IPbuff, uint16_t idx, uint8_
 
 }
 
-void Rx_Passing_ACK()
-{
-	switch (m_Gcmd.ID)
-	{
-		case ID_TOFH_2:
-			m_Gcmd.tofhAck = 1;
-		break;
-
-		case ID_TDDH_3:
-		break;
-
-		case ID_TFDH_4:
-		break;
-
-		case ID_TDUH_5:
-		break;
-
-		case ID_TDAH_1 :
-		case ID_TNOH_6 :
-		case ID_TUPG_10:
-		case ID_TVER_11:
-		case ID_TFCR_15:
-		case ID_TFCR_16:
-		case ID_TCN2_20:
-			TX_EOT();
-		break;
-
-
-	}
-	m_Gcmd.ID = 0;
-	m_Gcmd.txMsgFlag = 0;
-
-
-}
-void Rx_Passing_NAK()
-{
-    if(!m_Gcmd.eotTx)
-    {
-        HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
-        m_Gcmd.eotTx = 1;
-    }
-    else
-    {
-        memset(txAllBuff, 0, sizeof(txAllBuff));
-        // 미전송데이터 라즈베리파이에 저장하고
-        m_Gcmd.txCnt = 0;
-        m_Gcmd.eotTx = 0;
-        TX_EOT();
-    }
-
-
-}
-void Rx_Passing_EOT()// 내가 서버로부터 바디가 있는 데이터를 받았을때만 해당
-{
-
-}
 
 uint32_t DAY_END(uint32_t YYMMDD)
 {
@@ -1206,7 +1315,7 @@ void Day_Cal_TOFH_2(uint32_t startDay, uint32_t endDay)
 
 }
 
-void Cal_TOFH_2(uint32_t startDay, uint32_t endDay)
+void TOFH_2_Config(uint32_t startDay, uint32_t endDay)
 {
     //startDay, endDay : YYMMDDmmhh
     uint32_t sDay = startDay/10000;
@@ -1250,13 +1359,13 @@ void Cal_TOFH_2(uint32_t startDay, uint32_t endDay)
 
 		case STEP1:
 			Tx_2_TOFH(0, DayBuff[dayCnt], TimeSE[dayCnt][0], TimeSE[dayCnt][1], 5);
-			m_Gcmd.tofhAck = 0;
+			m_Gcmd.TOFH_2_Ack = 0;
 			timeStamp = HAL_GetTick();
 			step = STEP2;
 		break;
 
 		case STEP2:
-			if(m_Gcmd.tofhAck)
+			if(m_Gcmd.TOFH_2_Ack)
 			{
 				if(dayCnt < totalDay)
 				{
@@ -1289,6 +1398,7 @@ void Cal_TOFH_2(uint32_t startDay, uint32_t endDay)
 	}
 
 
+	if(m_Gcmd.tofhDone)TX_EOT();
 
 
 }
@@ -1325,7 +1435,7 @@ void Rx_Passing_5_PDUH()
         m_ch[ch].endTime = chkBuff[1];
         printf("endTime %u \r\n",chkBuff[1]);
 
-        TX_ACK();
+        TX_ACK(ID_PDUH_5);
     }
     else
     {
@@ -1354,7 +1464,7 @@ void Rx_Passing_7_PFST()
 
         m_ch[ch].noTxTime = chkBuff[0];
         printf("noTxTime %u \r\n",chkBuff[0]);
-        TX_ACK();
+        TX_ACK(ID_PFST_7);
 
 
     }
@@ -1390,7 +1500,7 @@ void Rx_Passing_8_PSEP()
 
         m_ch[ch].passWard = chkBuff[0];
         printf("passWard %u \r\n",chkBuff[0]);
-        TX_ACK();
+        TX_ACK(ID_PSEP_8);
 
     }
     else
@@ -1422,7 +1532,7 @@ void Rx_Passing_9_PTIM()
         printf("sevrDay %u \r\n",chkBuff[0]);
         m_ch[ch].sevrTime = chkBuff[1];
         printf("sevrTime %u \r\n",chkBuff[1]);
-        TX_ACK();
+        TX_ACK(ID_PTIM_9);
     }
     else
     {
@@ -1477,7 +1587,7 @@ void Rx_Passing_10_PUPG()
         printf("FTPpwd %s \r\n",strData10R_2);
         memcpy(m_ch[ch].IP, tempIpBuff, 4);
         printf("%hhu.%hhu.%hhu.%hhu \r\n",tempIpBuff[0], tempIpBuff[1], tempIpBuff[2], tempIpBuff[3]);
-        TX_ACK();
+        TX_ACK(ID_PUPG_10);
 
     }
     else
@@ -1534,7 +1644,7 @@ void Rx_Passing_12_PSET()
         printf("sevrDay %u \r\n",chkBuff[0]);
         m_ch[ch].sevrTime = chkBuff[1];
         printf("sevrTime %u \r\n",chkBuff[1]);
-        TX_ACK();
+        TX_ACK(ID_PSET_12);
 
     }
     else
@@ -1576,7 +1686,7 @@ void Rx_Passing_13_PFCC()
                  break;
             }
         }
-        TX_ACK();
+        TX_ACK(ID_PFCC_13);
 
     }
     else
@@ -1641,7 +1751,7 @@ void Rx_Passing_14_PAST()
                 m_ch[ch].part[i].measureStandard = chkBuff_F[i][2];
                 printf("measureStandard %f \r\n",chkBuff_F[i][2]);
         }
-        TX_ACK();
+        TX_ACK(ID_PAST_14);
     }
 }
 // [15] PFCR - 관계정보 조회 요청
@@ -1707,7 +1817,7 @@ void Rx_Passing_16_PFRS()
             m_ch[ch].protectBuff[i] = chkBuff[i][1];
             printf("protectBuff %u \r\n",chkBuff[i][1]);
         }
-        TX_ACK();
+        TX_ACK(ID_PFRS_16);
     }
 }
 // [17] PRSI - 통신서버IP 변경 요청
@@ -1741,7 +1851,7 @@ void Rx_Passing_17_PRSI()
          {
             printf("%hhu.\r\n",tempIpBuff[i]);
          }
-         TX_ACK();
+         TX_ACK(ID_PRSI_17);
 
     }
     else
@@ -1771,7 +1881,7 @@ void Rx_Passing_18_PDAT()
 
         m_ch[ch].transferMode = chkBuff[0];
         printf("transferMode %u \r\n",chkBuff[0]);
-        TX_ACK();
+        TX_ACK(ID_PDAT_18);
 
     }
     else
@@ -1804,7 +1914,7 @@ void Rx_Passing_19_PODT()
         printf("disposDelTime %u \r\n",chkBuff[0]);
         m_ch[ch].protectDelTime = chkBuff[1];
         printf("protectDelTime %u \r\n",chkBuff[1]);
-        TX_ACK();
+        TX_ACK(ID_PODT_19);
 
     }
     else
@@ -1825,6 +1935,7 @@ void Rx_Passing_20_PCN2()
         if(strtol_n(m_Gcmd.passingBuff, &tempData, IDX_COMM_4, LEN_COMM_4_4, TOTAL_LEN_PCN2_20, TOTAL_LEN_PCN2_20, VIEW_ADD_3))return;
         if(Check_crc16(m_Gcmd.passingBuff, IDX_PCN220_CRC))return;
         printf("> OK\r\n");
+		m_Gcmd.txCmd = ID_TCN2_20;
 
     }
     else
@@ -1847,7 +1958,7 @@ void Rx_Passing_22_PRBT()
         if(strtol_n(m_Gcmd.passingBuff, &tempData, IDX_COMM_4, LEN_COMM_4_4, TOTAL_LEN_PRBT22, TOTAL_LEN_PRBT22, VIEW_ADD_3))return;
         if(Check_crc16(m_Gcmd.passingBuff, IDX_PRBT22_CRC))return;
         printf("> OK\r\n");
-        TX_ACK();
+        TX_ACK(ID_PRBT_22);
 
     }
     else
@@ -1897,7 +2008,15 @@ void CallBack_TimeOut_Check()
         m_Gcmd.txMsgTimeStamp = 0;
     }
 }
-void Passing_Rx_Gateway()//
+
+void Rx_Get_Gateway(uint8_t rxData)
+{
+	m_Gcmd.rxBuff[m_Gcmd.rxCnt++] = rxData;
+	m_Gcmd.rxCnt %= 50;
+	m_Gcmd.rxTimeStamp = HAL_GetTick();
+}
+
+void Rx_Gateway_Config()//
 {
 	if(HAL_GetTick() - m_Gcmd.rxTimeStamp>30 && m_Gcmd.rxTimeStamp)
 	{
@@ -1932,12 +2051,6 @@ void Passing_Rx_Gateway()//
 	}
 }
 
-void Rx_Gateway_Config(uint8_t rxData)
-{
-	m_Gcmd.rxBuff[m_Gcmd.rxCnt++] = rxData;
-	m_Gcmd.rxCnt %= 50;
-	m_Gcmd.rxTimeStamp = HAL_GetTick();
-}
 void Tx_Gateway_Config()
 {
 	if(m_Gcmd.txCmd==0) return;
@@ -1978,9 +2091,22 @@ void Tx_Gateway_Config()
 		break;
 	}
 
+
+
 	m_Gcmd.txCmd = 0;
 }
 
+void Gateway_Config()
+{
+
+	ACK_ReSend();
+	TxMsg_ReSend();
+
+	TOFH_2_Config(2606051100, 2606071300);
+
+	Rx_Gateway_Config();
+	Tx_Gateway_Config();
+}
 
 
 void Uart_Simple_Rx_Passing(UART_T* uart, uint8_t rxData)
@@ -2047,8 +2173,7 @@ void Uart_Simple_Rx_Passing(UART_T* uart, uint8_t rxData)
 }
 void Testfunction()
 {
-    Passing_Rx_Gateway();
-//    Tx_2_TOFH(1);
+
 }
 
 
@@ -2235,7 +2360,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	 {
 		HAL_UART_Receive_IT(&huart1, Rx_data1, 1);
 		Uart_RxBuff_View(&m_uart1, Rx_data1[0]);
-        Rx_Gateway_Config(Rx_data1[0]);
+        Rx_Get_Gateway(Rx_data1[0]);
 
 	 }
 	 if(huart == &huart3)

@@ -678,8 +678,15 @@ typedef struct
 	char txAllBuff[40];
 	uint8_t ID;
 	uint8_t txCmd;
-	uint8_t tofhAck;
+	uint8_t TOFH_2_Ack;
+	uint8_t TDDH_3_Ack;
+	uint8_t TFDH_4_Ack;
+	uint8_t TDUH_5_Ack;
 	uint8_t tofhDone;
+
+	uint8_t stepNoneAck;
+	uint8_t stepNoneMsg;
+	uint8_t stepNoneNck;
 }CMD_T;
 
 
