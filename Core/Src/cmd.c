@@ -1142,7 +1142,7 @@ void Rx_Passing_EOT()// 내가 서버로부터 바디가 있는 데이터를 받았을때만 해당
 
 }
 
-uint32 DAY_END(uint32 YYMMDD)
+uint32_t DAY_END(uint32_t YYMMDD)
 {
     uint32_t YY = (YYMMDD/10000)*10000;
     uint32_t MMDD = YYMMDD/10000;
@@ -1891,6 +1891,7 @@ void CallBack_TimeOut_Check()
             case ID_PODT_19: printf("PODT_19");	break;
             case ID_PCN2_20: printf("PCN2_20");	break;
             case ID_PRBT_22: printf("PRBT_22");	break;
+
 
         }
         m_Gcmd.txMsgTimeStamp = 0;
