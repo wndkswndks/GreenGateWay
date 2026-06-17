@@ -147,6 +147,32 @@ void TX_ACK()
     uint8_t msg[1] = MSG_ACK;
     HAL_UART_Transmit(&huart1,msg,1,100);
     printf("ACK\r\n");
+    m_Gcmd.txAckTimeStamp = HAL_GetTick();
+    m_Gcmd.txAckFlag = 1;
+}
+void ACK_ReSend()
+{
+	if(m_Gcmd.txAckFlag)
+	{
+		if(HAL_GetTick() - m_Gcmd.txAckTimeStamp>30000 )
+		{
+			uint8_t msg[1] = MSG_ACK;
+			HAL_UART_Transmit(&huart1,msg,1,100);
+			printf("ACK\r\n");
+			m_Gcmd.txAckFlag = 0;
+
+		}
+	}
+}
+void TxMsg_ReSend()
+{
+	if(m_Gcmd.txMsgFlag)
+	{
+		if(HAL_GetTick() - m_Gcmd.txMsgTimeStamp>30000 )
+		{
+			m_Gcmd.txCmd = m_Gcmd.ID;
+		}
+	}
 }
 void TX_NAK()
 {
@@ -161,6 +187,12 @@ void TX_EOT()
     printf("EOT\r\n");
 }
 
+void TX_Memo(uint8_t cmd)
+{
+	m_Gcmd.ID = cmd;
+	m_Gcmd.txMsgTimeStamp = HAL_GetTick();
+	m_Gcmd.txMsgFlag = 1;
+}
 
 // 반환값을 없애고(void) 직접 버퍼에 씁니다.
 void append_crc16(uint8_t *buff, uint16_t idx)
@@ -200,6 +232,14 @@ uint8_t Check_crc16(uint8_t *buff, uint16_t idx)
         printf("CRC ERR\r\n");
         return 1;
     }
+}
+
+
+void TxAllBuff_Clear()
+{
+    memset(txAllBuff, 0, sizeof(txAllBuff));
+    m_Gcmd.txCnt = 0;
+    m_Gcmd.eotTx = 0;
 }
 
 void TxStr_Faci_Input(char* debugStr, uint16_t idx, uint16_t fixLen, uint32_t data)
@@ -425,14 +465,14 @@ void Tx_1_TDAH(uint8_t ch)
     m_Gcmd.txCnt = crcidx+2;
 	HAL_UART_Transmit(&huart1, (uint8_t*)txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
-	m_Gcmd.ID = ID_TDAH_1;
-	m_Gcmd.txTimeStamp = HAL_GetTick();
+	TX_Memo(ID_TDAH_1);
+
 }
 
 // ========================================================================================
 // [2] 전원단절구간자료 전송 (TOFH) - 가변 구조
 // ========================================================================================
-void Tx_2_TOFH(uint8_t ch)
+void Tx_2_TOFH(uint8_t ch, uint32_t pwOffDay, uint16_t startTime, uint16_t endTime, uint8_t mode)
 {
 
 	// 공통 헤더
@@ -443,17 +483,23 @@ void Tx_2_TOFH(uint8_t ch)
 	TxStr_TxMode_Input("transferMode", IDX_COMM_5,    LEN_COMM_5_3,      m_ch[ch].transferMode);
 
 	// 바디 (고정)
-	TxStr_Int_Input("powerOffDay",  IDX_TOFH2_6,   LEN_TOFH2_6_8,     m_ch[ch].powerOffDay);
-	TxStr_Int_Input("powerOffCnt",  IDX_TOFH2_7,   LEN_TOFH2_7_3,     m_ch[ch].powerOffCnt);
-
+	TxStr_Int_Input("powerOffDay",  IDX_TOFH2_6,   LEN_TOFH2_6_8,     pwOffDay);
 	// 바디 (가변)
-	int commIdx;
-	for(int i = 0; i < m_ch[ch].TOFHcnt; i++)
+	int commIdx = 0;
+	uint16_t idxCnt = 0;
+	for(int i = startTime; i <= endTime; i =i+mode)
 	{
-		commIdx = i * IDX_TOFH2_CYCLE;
+		if((i % 100) >= 60)
+		{
+			i += 40;
+		}
 
-		TxStr_Int_Input("powerOffTime", commIdx + IDX_TOFH2_8n, LEN_TOFH2_8n_4, m_ch[ch].powerOffTime[i]);
+		commIdx = idxCnt * IDX_TOFH2_CYCLE;
+		TxStr_Int_Input("powerOffTime", commIdx + IDX_TOFH2_8n, LEN_TOFH2_8n_4, i);
+		idxCnt++;
 	}
+	TxStr_Int_Input("powerOffCnt",  IDX_TOFH2_7,   LEN_TOFH2_7_3,     idxCnt);
+
 
 	// 테일러 (CRC)
 	uint16_t crcidx = (chimNum - 1) * IDX_TOFH2_CYCLE + IDX_TOFH2_8n + LEN_TOFH2_8n_4;
@@ -461,9 +507,9 @@ void Tx_2_TOFH(uint8_t ch)
     m_Gcmd.txCnt = crcidx+2;
 	HAL_UART_Transmit(&huart1, (uint8_t*)txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
-	m_Gcmd.ID = ID_TOFH_2;
-	m_Gcmd.txTimeStamp = HAL_GetTick();
+	TX_Memo(ID_TOFH_2);
 }
+
 
 // ========================================================================================
 // [3] 일일 마감자료 전송 (TDDH) - 가변 구조
@@ -506,8 +552,7 @@ void Tx_3_TDDH(uint8_t ch)
     m_Gcmd.txCnt = crcidx+2;
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
-	m_Gcmd.ID = ID_TDDH_3;
-	m_Gcmd.txTimeStamp = HAL_GetTick();
+	TX_Memo(ID_TDDH_3);
 }
 
 // ========================================================================================
@@ -547,8 +592,7 @@ void Tx_4_TFDH(uint8_t ch)
     m_Gcmd.txCnt = crcidx+2;
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
-	m_Gcmd.ID = ID_TFDH_4;
-	m_Gcmd.txTimeStamp = HAL_GetTick();
+	TX_Memo(ID_TFDH_4);
 }
 
 // ========================================================================================
@@ -588,8 +632,7 @@ void Tx_5_TDUH(uint8_t ch)
     m_Gcmd.txCnt = crcidx+2;
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
-	m_Gcmd.ID = ID_TDUH_5;
-	m_Gcmd.txTimeStamp = HAL_GetTick();
+	TX_Memo(ID_TDUH_5);
 }
 
 // ========================================================================================
@@ -627,8 +670,7 @@ void Tx_6_TNOH(uint8_t ch)
     m_Gcmd.txCnt = crcidx+2;
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
-	m_Gcmd.ID = ID_TNOH_6;
-	m_Gcmd.txTimeStamp = HAL_GetTick();
+	TX_Memo(ID_TNOH_6);
 }
 
 // ========================================================================================
@@ -647,8 +689,7 @@ void Tx_9_TTIM(uint8_t ch)
     m_Gcmd.txCnt = IDX_TTIM9_CRC+2;
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
-	m_Gcmd.ID = ID_TTIM_9;
-	m_Gcmd.txTimeStamp = HAL_GetTick();
+	TX_Memo(ID_TTIM_9);
 }
 
 // ========================================================================================
@@ -674,8 +715,7 @@ void Tx_10_TUPG(uint8_t ch)
     m_Gcmd.txCnt = IDX_TUPG10_CRC+2;
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
-	m_Gcmd.ID = ID_TUPG_10;
-	m_Gcmd.txTimeStamp = HAL_GetTick();
+	TX_Memo(ID_TUPG_10);
 }
 
 // ========================================================================================
@@ -700,8 +740,7 @@ void Tx_11_TVER(uint8_t ch)
     m_Gcmd.txCnt = IDX_TVER11_CRC+2;
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
-	m_Gcmd.ID = ID_TVER_11;
-	m_Gcmd.txTimeStamp = HAL_GetTick();
+	TX_Memo(ID_TVER_11);
 }
 
 // ========================================================================================
@@ -734,8 +773,7 @@ void Tx_15_TFCR(uint8_t ch)
     m_Gcmd.txCnt = crcidx+2;
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
-	m_Gcmd.ID = ID_TFCR_15;
-	m_Gcmd.txTimeStamp = HAL_GetTick();
+	TX_Memo(ID_TFCR_15);
 }
 
 // ========================================================================================
@@ -782,8 +820,7 @@ void Tx_21_TCN2(uint8_t ch)
     m_Gcmd.txCnt = crcidx+2;
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
-	m_Gcmd.ID = ID_TCN2_20;
-	m_Gcmd.txTimeStamp = HAL_GetTick();
+	TX_Memo(ID_TCN2_20);
 }
 
 
@@ -1050,11 +1087,36 @@ uint8_t Check_IP_Code(const uint8_t *str,  uint8_t* IPbuff, uint16_t idx, uint8_
 
 void Rx_Passing_ACK()
 {
-    memset(txAllBuff, 0, sizeof(txAllBuff));
-    m_Gcmd.txCnt = 0;
-    m_Gcmd.eotTx = 0;
+	switch (m_Gcmd.ID)
+	{
+		case ID_TOFH_2:
+			m_Gcmd.tofhAck = 1;
+		break;
 
-    TX_EOT();
+		case ID_TDDH_3:
+		break;
+
+		case ID_TFDH_4:
+		break;
+
+		case ID_TDUH_5:
+		break;
+
+		case ID_TDAH_1 :
+		case ID_TNOH_6 :
+		case ID_TUPG_10:
+		case ID_TVER_11:
+		case ID_TFCR_15:
+		case ID_TFCR_16:
+		case ID_TCN2_20:
+			TX_EOT();
+		break;
+
+
+	}
+	m_Gcmd.ID = 0;
+	m_Gcmd.txMsgFlag = 0;
+
 
 }
 void Rx_Passing_NAK()
@@ -1147,32 +1209,87 @@ void Day_Cal_TOFH_2(uint32_t startDay, uint32_t endDay)
 void Cal_TOFH_2(uint32_t startDay, uint32_t endDay)
 {
     //startDay, endDay : YYMMDDmmhh
-    uint8_t DayCnt = 0;
     uint32_t sDay = startDay/10000;
     uint32_t eDay = endDay/10000;
     uint32_t sTime = startDay%10000;
     uint32_t eTime = endDay%10000;
+	uint32_t ssTime,eeTime;
 
-    uint16_t TimeSE[4][2]= {{0,2355},{0,2355},{0,2355},{0,2355}};
-    uint32_t DayBuff[4] = {0,};
+    static uint8_t totalDay = 0;
+    static uint16_t TimeSE[4][2]= {{0,2355},{0,2355},{0,2355},{0,2355}};
+    static uint32_t DayBuff[4] = {0,};
+    static uint8_t dayCnt = 0;
+    static uint8_t reTry = 0xff;
     uint32_t temp;
     uint32_t yymmdd = sDay;
+	static uint32_t timeStamp;
 
-    TimeSE[0][0] = sTime;
-    for(int i =0 ;i < 4;i++)
-    {
-        DayBuff[i] = yymmdd;
-        if(yymmdd == eDay)
-        {
-            TimeSE[i][1] = eTime;
-            DayCnt = i;
-            break;
-        }
-        temp = DAY_END(yymmdd);
-        if (temp) yymmdd = temp;
-        else yymmdd++;
+	if(m_Gcmd.tofhDone) return; // 처음 한번만 사용하고 다음엔 사용안함
 
-    }
+	static uint8_t step = STEP0;
+	switch (step)
+	{
+		case STEP0:
+			TimeSE[0][0] = sTime;
+			for(int i =0 ;i < 4;i++)
+			{
+				DayBuff[i] = yymmdd;
+				if(yymmdd == eDay)
+				{
+					TimeSE[i][1] = eTime;
+					totalDay = i;
+					break;
+				}
+				temp = DAY_END(yymmdd);
+				if (temp) yymmdd = temp;
+				else yymmdd++;
+
+			}
+			step = STEP1;
+		break;
+
+		case STEP1:
+			Tx_2_TOFH(0, DayBuff[dayCnt], TimeSE[dayCnt][0], TimeSE[dayCnt][1], 5);
+			m_Gcmd.tofhAck = 0;
+			timeStamp = HAL_GetTick();
+			step = STEP2;
+		break;
+
+		case STEP2:
+			if(m_Gcmd.tofhAck)
+			{
+				if(dayCnt < totalDay)
+				{
+					dayCnt++;
+					step = STEP1;
+				}
+				else m_Gcmd.tofhDone = 1;
+
+			}
+			else if(HAL_GetTick()-timeStamp >= 30000)
+			{
+				if(reTry == dayCnt)
+				{
+					if(dayCnt < totalDay)
+					{
+						dayCnt++; // 한번 보냈던 거면 재시도는 안함
+						step = STEP1;
+					}
+					else m_Gcmd.tofhDone = 1;
+				}
+				else
+				{
+					step = STEP1;
+				}
+
+				reTry = dayCnt;
+			}
+		break;
+
+	}
+
+
+
 
 }
 
@@ -1209,8 +1326,6 @@ void Rx_Passing_5_PDUH()
         printf("endTime %u \r\n",chkBuff[1]);
 
         TX_ACK();
-        m_Gcmd.ID = ID_PDUH_5;
-        m_Gcmd.txTimeStamp = HAL_GetTick();
     }
     else
     {
@@ -1240,8 +1355,7 @@ void Rx_Passing_7_PFST()
         m_ch[ch].noTxTime = chkBuff[0];
         printf("noTxTime %u \r\n",chkBuff[0]);
         TX_ACK();
-        m_Gcmd.ID = ID_PFST_7;
-        m_Gcmd.txTimeStamp = HAL_GetTick();
+
 
     }
     else
@@ -1277,8 +1391,7 @@ void Rx_Passing_8_PSEP()
         m_ch[ch].passWard = chkBuff[0];
         printf("passWard %u \r\n",chkBuff[0]);
         TX_ACK();
-        m_Gcmd.ID = ID_PSEP_8;
-        m_Gcmd.txTimeStamp = HAL_GetTick();
+
     }
     else
     {
@@ -1310,8 +1423,6 @@ void Rx_Passing_9_PTIM()
         m_ch[ch].sevrTime = chkBuff[1];
         printf("sevrTime %u \r\n",chkBuff[1]);
         TX_ACK();
-        m_Gcmd.ID = ID_PTIM_9;
-        m_Gcmd.txTimeStamp = HAL_GetTick();
     }
     else
     {
@@ -1367,8 +1478,6 @@ void Rx_Passing_10_PUPG()
         memcpy(m_ch[ch].IP, tempIpBuff, 4);
         printf("%hhu.%hhu.%hhu.%hhu \r\n",tempIpBuff[0], tempIpBuff[1], tempIpBuff[2], tempIpBuff[3]);
         TX_ACK();
-        m_Gcmd.ID = ID_PUPG_10;
-        m_Gcmd.txTimeStamp = HAL_GetTick();
 
     }
     else
@@ -1394,9 +1503,7 @@ void Rx_Passing_11_PVER()
 
         printf("> OK\r\n");
 
-        Tx_11_TVER(ch);
-        m_Gcmd.ID = ID_PVER_11;
-        m_Gcmd.txTimeStamp = HAL_GetTick();
+        m_Gcmd.txCmd = ID_TVER_11;
     }
     else
     {
@@ -1428,8 +1535,7 @@ void Rx_Passing_12_PSET()
         m_ch[ch].sevrTime = chkBuff[1];
         printf("sevrTime %u \r\n",chkBuff[1]);
         TX_ACK();
-        m_Gcmd.ID = ID_PSET_12;
-        m_Gcmd.txTimeStamp = HAL_GetTick();
+
     }
     else
     {
@@ -1471,8 +1577,7 @@ void Rx_Passing_13_PFCC()
             }
         }
         TX_ACK();
-        m_Gcmd.ID = ID_PFCC_13;
-        m_Gcmd.txTimeStamp = HAL_GetTick();
+
     }
     else
     {
@@ -1521,7 +1626,6 @@ void Rx_Passing_14_PAST()
         // 루프 탈출 후 최종 위치의 2바이트 강제 수신 테스트 매칭
         if(Check_crc16(m_Gcmd.passingBuff, variableIdx))return;
         printf("> OK\r\n");
-        m_Gcmd.ID = ID_PAST_14;
 
 
         for(int i = 0; i < itemCount; i++)
@@ -1538,7 +1642,6 @@ void Rx_Passing_14_PAST()
                 printf("measureStandard %f \r\n",chkBuff_F[i][2]);
         }
         TX_ACK();
-        m_Gcmd.txTimeStamp = HAL_GetTick();
     }
 }
 // [15] PFCR - 관계정보 조회 요청
@@ -1557,9 +1660,7 @@ void Rx_Passing_15_PFCR()
         if(Check_crc16(m_Gcmd.passingBuff, IDX_PFCR15_CRC))return;
         printf("> OK\r\n");
 
-        Tx_15_TFCR(ch);
-        m_Gcmd.ID = ID_PFCR_15;
-        m_Gcmd.txTimeStamp = HAL_GetTick();
+        m_Gcmd.txCmd = ID_TFCR_15;
     }
     else
     {
@@ -1607,8 +1708,6 @@ void Rx_Passing_16_PFRS()
             printf("protectBuff %u \r\n",chkBuff[i][1]);
         }
         TX_ACK();
-        m_Gcmd.ID = ID_PFRS_16;
-        m_Gcmd.txTimeStamp = HAL_GetTick();
     }
 }
 // [17] PRSI - 통신서버IP 변경 요청
@@ -1643,8 +1742,7 @@ void Rx_Passing_17_PRSI()
             printf("%hhu.\r\n",tempIpBuff[i]);
          }
          TX_ACK();
-         m_Gcmd.ID = ID_PRSI_17;
-         m_Gcmd.txTimeStamp = HAL_GetTick();
+
     }
     else
     {
@@ -1674,8 +1772,7 @@ void Rx_Passing_18_PDAT()
         m_ch[ch].transferMode = chkBuff[0];
         printf("transferMode %u \r\n",chkBuff[0]);
         TX_ACK();
-        m_Gcmd.ID = ID_PDAT_18;
-        m_Gcmd.txTimeStamp = HAL_GetTick();
+
     }
     else
     {
@@ -1708,8 +1805,7 @@ void Rx_Passing_19_PODT()
         m_ch[ch].protectDelTime = chkBuff[1];
         printf("protectDelTime %u \r\n",chkBuff[1]);
         TX_ACK();
-        m_Gcmd.ID = ID_PODT_19;
-        m_Gcmd.txTimeStamp = HAL_GetTick();
+
     }
     else
     {
@@ -1729,8 +1825,7 @@ void Rx_Passing_20_PCN2()
         if(strtol_n(m_Gcmd.passingBuff, &tempData, IDX_COMM_4, LEN_COMM_4_4, TOTAL_LEN_PCN2_20, TOTAL_LEN_PCN2_20, VIEW_ADD_3))return;
         if(Check_crc16(m_Gcmd.passingBuff, IDX_PCN220_CRC))return;
         printf("> OK\r\n");
-        m_Gcmd.ID = ID_PCN2_20;
-        m_Gcmd.txTimeStamp = HAL_GetTick();
+
     }
     else
     {
@@ -1753,8 +1848,7 @@ void Rx_Passing_22_PRBT()
         if(Check_crc16(m_Gcmd.passingBuff, IDX_PRBT22_CRC))return;
         printf("> OK\r\n");
         TX_ACK();
-        m_Gcmd.ID = ID_PRBT_22;
-        m_Gcmd.txTimeStamp = HAL_GetTick();
+
     }
     else
     {
@@ -1764,7 +1858,7 @@ void Rx_Passing_22_PRBT()
 
 void CallBack_TimeOut_Check()
 {
-    if(m_Gcmd.txTimeStamp && HAL_GetTick() - m_Gcmd.txTimeStamp > 30000)
+    if(m_Gcmd.txMsgTimeStamp && HAL_GetTick() - m_Gcmd.txMsgTimeStamp > 30000)
     {
         printf("TimeOut \r\n");
         switch (m_Gcmd.ID)
@@ -1797,12 +1891,9 @@ void CallBack_TimeOut_Check()
             case ID_PODT_19: printf("PODT_19");	break;
             case ID_PCN2_20: printf("PCN2_20");	break;
             case ID_PRBT_22: printf("PRBT_22");	break;
-            q
-            qqq
-
 
         }
-        m_Gcmd.txTimeStamp = 0;
+        m_Gcmd.txMsgTimeStamp = 0;
     }
 }
 void Passing_Rx_Gateway()//
@@ -1845,6 +1936,48 @@ void Rx_Gateway_Config(uint8_t rxData)
 	m_Gcmd.rxBuff[m_Gcmd.rxCnt++] = rxData;
 	m_Gcmd.rxCnt %= 50;
 	m_Gcmd.rxTimeStamp = HAL_GetTick();
+}
+void Tx_Gateway_Config()
+{
+	if(m_Gcmd.txCmd==0) return;
+
+	switch (m_Gcmd.txCmd)
+	{
+		case ID_TDAH_1 :
+			Tx_1_TDAH(0);
+		break;
+
+		case ID_TDDH_3 :
+			Tx_3_TDDH(0);
+		break;
+		case ID_TFDH_4 :
+			Tx_4_TFDH(0);
+		break;
+		case ID_TDUH_5 :
+			Tx_5_TDUH(0);
+		break;
+		case ID_TNOH_6 :
+			Tx_6_TNOH(0);
+		break;
+		case ID_TTIM_9 :
+			Tx_9_TTIM(0);
+		break;
+		case ID_TUPG_10:
+			Tx_10_TUPG(0);
+		break;
+		case ID_TVER_11:
+			Tx_11_TVER(0);
+		break;
+		case ID_TFCR_15:
+			Tx_15_TFCR(0);
+		break;
+
+		case ID_TCN2_20:
+			Tx_21_TCN2(0);
+		break;
+	}
+
+	m_Gcmd.txCmd = 0;
 }
 
 

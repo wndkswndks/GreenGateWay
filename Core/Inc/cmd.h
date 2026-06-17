@@ -670,10 +670,16 @@ typedef struct
 	uint8_t rxCnt;
 	uint8_t txCnt;
 	uint32_t rxTimeStamp;
-	uint32_t txTimeStamp;
+	uint32_t txMsgTimeStamp;
+	uint8_t txMsgFlag;
+	uint32_t txAckTimeStamp;
+	uint8_t txAckFlag;
 	uint8_t eotTx;
 	char txAllBuff[40];
 	uint8_t ID;
+	uint8_t txCmd;
+	uint8_t tofhAck;
+	uint8_t tofhDone;
 }CMD_T;
 
 
