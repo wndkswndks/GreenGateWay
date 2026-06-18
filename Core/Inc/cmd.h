@@ -32,7 +32,7 @@
 #define   TOTAL_LEN_PRBT22    20   // [22] GW 재기동 요청 (바디 없음: 18 + 0 + 2) [cite: 1330]
 
 #define   TOTAL_LEN_TDAH1(N)    	 (35+15*N)
-#define   TOTAL_LEN_TOFH2(N)    	 (34+8*N)
+#define   TOTAL_LEN_TOFH2(N)    	 (34+4*N)
 #define   TOTAL_LEN_TDDH3(N)    	 (42+21*N)
 #define   TOTAL_LEN_TFDH4(N)   	     (35+15*N)
 #define   TOTAL_LEN_TDUH5(N)    	 (35+15*N)
@@ -45,11 +45,11 @@
 #define   TOTAL_LEN_TCN2_20(N)   	 (155+24*N)
 
 //YYMMDDhhmm
-#define YY(T) (((T) / 100000000) % 100)
-#define MM(T) (((T) / 1000000) % 100)
-#define DD(T) (((T) / 10000) % 100)
-#define hh(T) (((T) / 100) % 100)
-#define mm(T) ((T) % 100)
+#define DAY_YY(T) (((T) / 100000000) % 100)
+#define DAY_MM(T) (((T) / 1000000) % 100)
+#define DAY_DD(T) (((T) / 10000) % 100)
+#define DAY_hh(T) (((T) / 100) % 100)
+#define DAY_mm(T) ((T) % 100)
 
 
 
@@ -155,6 +155,11 @@
 #define	MSG_NAK      0x15
 #define	MSG_EOT      0x04
 
+#define MIN_60  60
+#define HOUR_1  100
+#define HOUR_24  2400
+#define YEAR_1  10000
+#define MON_1  100
 
 /*  			define end  			*/
 
@@ -173,6 +178,7 @@ typedef enum
 	LEN_COMM_3_3 = 3,
 	LEN_COMM_4_4 = 4,
 	LEN_COMM_5_3 = 3,
+	LEN_CRC = 2,
 
 	LEN_TDAH1_6_10 = 10,
 	LEN_TDAH1_7_2 = 2,
@@ -310,6 +316,8 @@ typedef enum
 	LEN_TCN2_21_19_6n = 6,
 	LEN_TCN2_21_20_6n = 6,
 	LEN_TCN2_21_21_6n = 6,
+
+
 // ==========================================
 // ========================================================================================
 	// 공통 헤더 (Header) 및 바디 시작점
@@ -332,7 +340,7 @@ typedef enum
 	IDX_TDAH1_12n = 46, // 가동상태 (1)
 	IDX_TDAH1_13n = 47, // 방지시설 정상여부 (1)
 	IDX_TDAH1_OUT = 48, // 가변 바디 종료점
-	IDX_TDAH1_CYCLE = IDX_TDAH1_OUT - IDX_TDAH1_8n, // 15 (루프 보폭)
+	IDX_TDAH1_CYCLE = 15, // 15 (루프 보폭)
 
 	// ========================================================================================
 	// [2] 전원단절구간자료 전송 (TOFH) - 가변 구조
@@ -341,7 +349,7 @@ typedef enum
 	IDX_TOFH2_7 = 29,	// 전원단절 건수 (3)
 	IDX_TOFH2_8n = 32,	// 시분 (4)
 	IDX_TOFH2_OUT = 36, // 가변 바디 종료점
-	IDX_TOFH2_CYCLE = IDX_TOFH2_OUT - IDX_TOFH2_8n, // 4
+	IDX_TOFH2_CYCLE = 4, // 4
 
 	// ========================================================================================
 	// [3] 일일 마감자료 전송 (TDDH) - 가변 구조
@@ -359,7 +367,7 @@ typedef enum
 	IDX_TDDH3_16n = 55, // 전원 단절 건수 (3)
 	IDX_TDDH3_17n = 58, // 점검 중 건수 (3)
 	IDX_TDDH3_OUT = 61, // 가변 바디 종료점
-	IDX_TDDH3_CYCLE = IDX_TDDH3_OUT - IDX_TDDH3_11n, // 21
+	IDX_TDDH3_CYCLE =  21,
 
 	// ========================================================================================
 	// [4] 미전송자료 전송 (TFDH) - 가변 구조
@@ -373,7 +381,7 @@ typedef enum
 	IDX_TFDH4_12n = 46, // 가동 상태 (1)
 	IDX_TFDH4_13n = 47, // 배출시설 정상여부 (1)
 	IDX_TFDH4_OUT = 48, // 가변 바디 종료점
-	IDX_TFDH4_CYCLE = IDX_TFDH4_OUT - IDX_TFDH4_8n, // 15
+	IDX_TFDH4_CYCLE = 15,
 
 	// ========================================================================================
 	// [5] 저장자료 요청/응답 (PDUH / TDUH)
@@ -393,7 +401,7 @@ typedef enum
 	IDX_TDUH5_12n = 46, // 가동 상태 (1)
 	IDX_TDUH5_13n = 47, // 배출시설 정상여부 (1)
 	IDX_TDUH5_OUT = 48, // 가변 바디 종료점
-	IDX_TDUH5_CYCLE = IDX_TDUH5_OUT - IDX_TDUH5_8n, // 15
+	IDX_TDUH5_CYCLE = 15, // 15
 
 	// ========================================================================================
 	// [6] 5분자료 전송대상 정보 (TNOH) - 가변 구조
@@ -405,7 +413,7 @@ typedef enum
 	IDX_TNOH6_10n = 39, // 가동상태 (1)
 	IDX_TNOH6_11n = 40, // 방지시설 정상여부 코드 (1)
 	IDX_TNOH6_OUT = 41, // 가변 바디 종료점
-	IDX_TNOH6_CYCLE = IDX_TNOH6_OUT - IDX_TNOH6_8n, // 8
+	IDX_TNOH6_CYCLE = 8,
 
 	// ========================================================================================
 	// [7] 미전송자료 전송시간 변경 요청 (PFST) - 고정 길이 구조
@@ -493,7 +501,7 @@ typedef enum
 	IDX_PAST14_9n = 32,  // 측정범위 최대값 (6)
 	IDX_PAST14_10n = 38, // 측정범위 기준값 (6)
 	IDX_PAST14_OUT = 44, // 가변 바디 종료점
-	IDX_PAST14_CYCLE = IDX_PAST14_OUT - IDX_PAST14_6n, // 24
+	IDX_PAST14_CYCLE = 24,
 
 	// ========================================================================================
 	// [15 / 16] 관계정보 요청/응답 및 변경 (TFCR / PFRS 공통)
@@ -506,7 +514,7 @@ typedef enum
 	IDX_TFCR15_6n = 20,  // 배출시설코드 (5)
 	IDX_TFCR15_7n = 25,  // 방지시설코드 (5)
 	IDX_TFCR15_OUT = 30, // 가변 바디 종료점
-	IDX_TFCR15_CYCLE = IDX_TFCR15_OUT - IDX_TFCR15_6n, // 10
+	IDX_TFCR15_CYCLE = 10,
 
 	// ========================================================================================
 // ========================================================================================
@@ -516,7 +524,7 @@ typedef enum
 	IDX_PFRS16_6n = 20,  // 배출시설코드 (5) [cite: 1167]
 	IDX_PFRS16_7n = 25,  // 방지시설코드 (5) [cite: 1167]
 	IDX_PFRS16_OUT = 30, // 가변 바디 종료점
-	IDX_PFRS16_CYCLE = IDX_PFRS16_OUT - IDX_PFRS16_6n, // 10 (루프 보폭)
+	IDX_PFRS16_CYCLE = 10, // 10 (루프 보폭)
 	// [17] 통신서버IP 변경 요청 (PRSI) - 고정 길이 구조
 	// ========================================================================================
 	IDX_PRSI17_5 = 18,	 // 암호화된 통신서버 IP (16)
@@ -560,7 +568,7 @@ typedef enum
 	IDX_TCN2_21_20n = 165, // 측정범위 최대값 (6)
 	IDX_TCN2_21_21n = 171, // 측정범위 기준값 (6)
 	IDX_TCN2_21_OUT = 177, // 가변 바디 종료점
-	IDX_TCN2_21_CYCLE = IDX_TCN2_21_OUT - IDX_TCN2_21_17n, // 24
+	IDX_TCN2_21_CYCLE = 24, // 24
 
 	// ========================================================================================
 	// [22] GW 재기동 요청 (PRBT) - 바디 없음
@@ -656,6 +664,12 @@ typedef enum
     ID_PRBT_22 = 28,
 
 
+
+	OPER_START_GRACE = 9, //배출시설 가동유예
+	PROTEC_STOP_GRACE = 8,// 방지시설 중지유예
+	ABNORMAL = 0, // 비정상
+	NORMAL = 1,// 정상
+
 } CMD_E;
 /*  			enum end  				*/
 
@@ -688,14 +702,27 @@ typedef struct
 	uint8_t stepNoneMsg;
 	uint8_t stepNoneNck;
 }CMD_T;
+typedef struct
+{
+	uint8_t hour;
+	uint8_t min;
+	uint8_t sec;
+	uint8_t DD;
+	uint8_t MM;
+	uint8_t YY;
 
+	uint8_t minChange;
+	uint32_t wakeUpTime;
+	uint32_t lastTxTime;
+
+} TIME_T;
 
 typedef struct
 {
 	uint32_t facCode;//시설코드 [1][4][5][6][13]
 	uint8_t itemCode;//항목코드 [1][4][5][6]
-	float measureValue;//측정값 [1][4][5]
-	uint8_t measureStatus;//자료상태 [1][4][5]
+	float value;//측정값 [1][4][5]
+	uint8_t status;//자료상태 [1][4][5]
 	uint8_t operStatus;//가동상태 [1][4][5][6]
 	uint8_t protectStatus;//배출시설 정상여부 [1][4][5][6]
 
@@ -703,24 +730,22 @@ typedef struct
 	uint16_t FultCnt;//비정상건수[3]
 	uint16_t commuErrCnt;//통신불량[3]
 	uint16_t fixCnt;//점검중건수[3]
-	float measureMin;//측정범위 최소값[14]
-	float measureMax;//측정범위 최대값[14]
-	float measureStandard;//측정범위 기준값[14]
+	float rangeMin;//측정범위 최소값[14]
+	float rangeMax;//측정범위 최대값[14]
+	float rangeStandard;//측정범위 기준값[14]
 } PART_T;
 
 typedef struct
 {
 
-	uint32_t workPlaceCode;//사업장코드[공통]
 	uint8_t chimCode;//굴뚝코드[공통]
 	uint16_t allLan;//전체길이[공통]
 	uint32_t measureTime;//측정시간[공통] // YYMMDDhhmm
-	uint8_t measureQty;//항목수[1][4][5]
-	PART_T part[5];//항목
+	uint8_t itemNum;
+	PART_T item[5];//항목
 
 	uint32_t powerOffDay;//전원단절 기준일자 yyyyMMDD[2]
 	uint16_t powerOffCnt;//전원단절 건수[2][3]
-	uint16_t powerOffTime[290];//전원단절시간 hhmm[2]
 	uint32_t closeDate;
 	uint16_t dayCnt;
 	uint16_t TDAHcnt;//TDAH건수[3]
@@ -749,9 +774,6 @@ typedef struct
     uint16_t protectBuff[10];
 
 	uint8_t transferMode;//[21][공통][18]
-	float valueMin;//[14]
-	float valueMax;//[14]
-	float valueSdrd;//[14]
 	uint32_t sevrDay; // 서버 날짜 6자리 YYMMDD
 	uint32_t sevrTime;// 서버시간 6자리 hhmmss [9][12]
     uint32_t startTime;//시작일시[5]

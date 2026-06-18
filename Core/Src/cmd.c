@@ -82,16 +82,16 @@ void UartRx1DataProcess()
 
 
 
-uint8_t chimNum = 2;
+uint8_t chNum = 0;
+uint8_t chNumMax = 1;
+
 CHIMNEY_T m_ch[4];
 CMD_T m_Gcmd;
 
+TIME_T m_time;
 
 
-char strData10R[10];
-char strData40R[40];
-char strData50R[50];
-char strData10R_2[10];
+uint32_t workPlaceCode;//사업장코드[공통]
 
 
 
@@ -274,6 +274,22 @@ void Rx_Passing_ACK()
 		break;
 
 		case ID_TDAH_1 :
+			TX_EOT();
+			if(m_ch[0].transferMode == TXMODE_HAF_NUM)
+			{
+				for(int i =0 ;i < m_ch[0].itemNum; i++)
+				{
+					if((m_ch[0].item[i].protectStatus != NORMAL) ||m_ch[0].item[i].operStatus)
+					{
+						m_Gcmd.txCmd = ID_TNOH_6;
+					}
+				}
+			}
+
+
+
+		break;
+
 		case ID_TNOH_6 :
 		case ID_TUPG_10:
 		case ID_TVER_11:
@@ -598,33 +614,33 @@ void Tx_1_TDAH(uint8_t ch)
 
 	// 공통 헤더
 	TxStr_Str_Input("cmd",          IDX_COMM_1,      LEN_COMM_1_4,      CMD_TDAH);
-	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      m_ch[ch].workPlaceCode);
-	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,    LEN_COMM_3_3,      m_ch[ch].chimCode);
-	TxStr_Int_Input("allLan",     IDX_COMM_4,        LEN_COMM_4_4,      TOTAL_LEN_TDAH1(chimNum));
+	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      workPlaceCode);
+	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,    LEN_COMM_3_3,      ch);
+	TxStr_Int_Input("allLan",     IDX_COMM_4,        LEN_COMM_4_4,      TOTAL_LEN_TDAH1(m_ch[ch].itemNum));
 	TxStr_TxMode_Input("transferMode",     IDX_COMM_5,    LEN_COMM_5_3,      m_ch[ch].transferMode);
 
 	// 바디 (고정)
 	TxStr_Int_Input("measureTime",  IDX_TDAH1_6,   LEN_TDAH1_6_10,    m_ch[ch].measureTime );
-	TxStr_Int_Input("measureQty",    IDX_TDAH1_7,   LEN_TDAH1_7_2,     m_ch[ch].measureQty);
+	TxStr_Int_Input("measureQty",    IDX_TDAH1_7,   LEN_TDAH1_7_2,     m_ch[ch].itemNum);
 
 	// 바디 (가변)
 	int commIdx;
-	for(int i = 0; i < chimNum; i++)
+	for(int i = 0; i < m_ch[ch].itemNum; i++)
 	{
 		commIdx = i * IDX_TDAH1_CYCLE;
 
-		TxStr_Faci_Input("facCode",     commIdx + IDX_TDAH1_8n,  LEN_TDAH1_8n_5,  m_ch[ch].part[chimNum].facCode);
-		TxStr_Item_Code_Input("itemCode", commIdx + IDX_TDAH1_9n,  LEN_TDAH1_9n_1,  m_ch[ch].part[chimNum].itemCode);
-		TxStr_float_Input("measureValue", commIdx + IDX_TDAH1_10n,  LEN_TDAH1_10n_6, m_ch[ch].part[chimNum].measureValue);
-		TxStr_Int_Input("measureStatus",  commIdx + IDX_TDAH1_11n,  LEN_TDAH1_11n_1, m_ch[ch].part[chimNum].measureStatus);
-		TxStr_Int_Input("operStatus",     commIdx + IDX_TDAH1_12n,  LEN_TDAH1_12n_1, m_ch[ch].part[chimNum].operStatus);
-		TxStr_Int_Input("protectStatus",    commIdx + IDX_TDAH1_13n,  LEN_TDAH1_13n_1, m_ch[ch].part[chimNum].protectStatus);
+		TxStr_Faci_Input("facCode",     commIdx + IDX_TDAH1_8n,  LEN_TDAH1_8n_5,  m_ch[ch].item[i].facCode);
+		TxStr_Item_Code_Input("itemCode", commIdx + IDX_TDAH1_9n,  LEN_TDAH1_9n_1,  m_ch[ch].item[i].itemCode);
+		TxStr_float_Input("measureValue", commIdx + IDX_TDAH1_10n,  LEN_TDAH1_10n_6, m_ch[ch].item[i].value);
+		TxStr_Int_Input("measureStatus",  commIdx + IDX_TDAH1_11n,  LEN_TDAH1_11n_1, m_ch[ch].item[i].status);
+		TxStr_Int_Input("operStatus",     commIdx + IDX_TDAH1_12n,  LEN_TDAH1_12n_1, m_ch[ch].item[i].operStatus);
+		TxStr_Int_Input("protectStatus",    commIdx + IDX_TDAH1_13n,  LEN_TDAH1_13n_1, m_ch[ch].item[i].protectStatus);
 	}
 
 	// 테일러 (CRC)
-	uint16_t crcidx = (chimNum - 1) * IDX_TDAH1_CYCLE + IDX_TDAH1_13n + LEN_TDAH1_13n_1;
+	uint16_t crcidx = m_ch[ch].itemNum* IDX_TDAH1_CYCLE + IDX_TDAH1_8n;
     append_crc16(txAllBuff, crcidx);
-    m_Gcmd.txCnt = crcidx+2;
+    m_Gcmd.txCnt = crcidx+LEN_CRC;
 	HAL_UART_Transmit(&huart1, (uint8_t*)txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	TX_Memo(ID_TDAH_1);
@@ -640,9 +656,8 @@ void Tx_2_TOFH(uint8_t ch, uint32_t pwOffDay, uint16_t startTime, uint16_t endTi
 
 	// 공통 헤더
 	TxStr_Str_Input("cmd",            IDX_COMM_1,    LEN_COMM_1_4,      CMD_TOFH);
-	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      m_ch[ch].workPlaceCode);
-	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,    LEN_COMM_3_3,      m_ch[ch].chimCode);
-	TxStr_Int_Input("allLan",         IDX_COMM_4,    LEN_COMM_4_4,      TOTAL_LEN_TOFH2(chimNum));
+	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      workPlaceCode);
+	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,    LEN_COMM_3_3,      ch);
 	TxStr_TxMode_Input("transferMode", IDX_COMM_5,    LEN_COMM_5_3,      m_ch[ch].transferMode);
 
 	// 바디 (고정)
@@ -662,12 +677,13 @@ void Tx_2_TOFH(uint8_t ch, uint32_t pwOffDay, uint16_t startTime, uint16_t endTi
 		idxCnt++;
 	}
 	TxStr_Int_Input("powerOffCnt",  IDX_TOFH2_7,   LEN_TOFH2_7_3,     idxCnt);
+	TxStr_Int_Input("allLan",		  IDX_COMM_4,	 LEN_COMM_4_4,		TOTAL_LEN_TOFH2(idxCnt));
 
 
 	// 테일러 (CRC)
-	uint16_t crcidx = (chimNum - 1) * IDX_TOFH2_CYCLE + IDX_TOFH2_8n + LEN_TOFH2_8n_4;
+	uint16_t crcidx = idxCnt* IDX_TOFH2_CYCLE + IDX_TOFH2_8n;
     append_crc16(txAllBuff, crcidx);
-    m_Gcmd.txCnt = crcidx+2;
+    m_Gcmd.txCnt = crcidx+LEN_CRC;
 	HAL_UART_Transmit(&huart1, (uint8_t*)txAllBuff, m_Gcmd.txCnt, 100);
 	Save_30Day_2_TOFH();
 	printf("> END \r\n");
@@ -682,9 +698,9 @@ void Tx_3_TDDH(uint8_t ch)
 
 	// 공통 헤더
 	TxStr_Str_Input("cmd",            IDX_COMM_1,    LEN_COMM_1_4,      CMD_TDDH);
-	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      m_ch[ch].workPlaceCode);
-	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,    LEN_COMM_3_3,      m_ch[ch].chimCode);
-	TxStr_Int_Input("allLan",         IDX_COMM_4,    LEN_COMM_4_4,      TOTAL_LEN_TDDH3(chimNum));
+	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      workPlaceCode);
+	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,    LEN_COMM_3_3,      ch);
+	TxStr_Int_Input("allLan",         IDX_COMM_4,    LEN_COMM_4_4,      TOTAL_LEN_TDDH3(m_ch[ch].itemNum));
 	TxStr_TxMode_Input("transferMode",  IDX_COMM_5,    LEN_COMM_5_3,      m_ch[ch].transferMode);
 
 	// 바디 (고정)
@@ -692,27 +708,27 @@ void Tx_3_TDDH(uint8_t ch)
 	TxStr_Int_Input("dayCnt",       IDX_TDDH3_7,   LEN_TDDH3_7_3,     m_ch[ch].dayCnt);
 	TxStr_Int_Input("TDAHcnt",      IDX_TDDH3_8,   LEN_TDDH3_8_3,     m_ch[ch].TDAHcnt);
 	TxStr_Int_Input("TOFHcnt",      IDX_TDDH3_9,   LEN_TDDH3_9_3,     m_ch[ch].TOFHcnt);
-	TxStr_Int_Input("measureQty",   IDX_TDDH3_10,  LEN_TDDH3_10_2,    m_ch[ch].measureQty );
+	TxStr_Int_Input("measureQty",   IDX_TDDH3_10,  LEN_TDDH3_10_2,    m_ch[ch].itemNum );
 
 	// 바디 (가변)
 	int commIdx;
-	for(int i = 0; i < chimNum; i++)
+	for(int i = 0; i < m_ch[ch].itemNum; i++)
 	{
 		commIdx = i * IDX_TDDH3_CYCLE;
 
-		TxStr_Faci_Input("facCode",     commIdx + IDX_TDDH3_11n,  LEN_TDDH3_11n_5, m_ch[ch].part[chimNum].facCode);
-		TxStr_Item_Code_Input("itemCode", commIdx + IDX_TDDH3_12n,  LEN_TDDH3_12n_1, m_ch[ch].part[chimNum].itemCode);
-		TxStr_Int_Input("nomalCnt",     commIdx + IDX_TDDH3_13n,  LEN_TDDH3_13n_3, m_ch[ch].part[chimNum].nomalCnt );
-		TxStr_Int_Input("FultCnt",      commIdx + IDX_TDDH3_14n,  LEN_TDDH3_14n_3, m_ch[ch].part[chimNum].FultCnt);
-		TxStr_Int_Input("commuErrCnt",  commIdx + IDX_TDDH3_15n,  LEN_TDDH3_15n_3, m_ch[ch].part[chimNum].commuErrCnt);
+		TxStr_Faci_Input("facCode",     commIdx + IDX_TDDH3_11n,  LEN_TDDH3_11n_5, m_ch[ch].item[i].facCode);
+		TxStr_Item_Code_Input("itemCode", commIdx + IDX_TDDH3_12n,  LEN_TDDH3_12n_1, m_ch[ch].item[i].itemCode);
+		TxStr_Int_Input("nomalCnt",     commIdx + IDX_TDDH3_13n,  LEN_TDDH3_13n_3, m_ch[ch].item[i].nomalCnt );
+		TxStr_Int_Input("FultCnt",      commIdx + IDX_TDDH3_14n,  LEN_TDDH3_14n_3, m_ch[ch].item[i].FultCnt);
+		TxStr_Int_Input("commuErrCnt",  commIdx + IDX_TDDH3_15n,  LEN_TDDH3_15n_3, m_ch[ch].item[i].commuErrCnt);
 		TxStr_Int_Input("powerOffCnt",  commIdx + IDX_TDDH3_16n,  LEN_TDDH3_16n_3, m_ch[ch].powerOffCnt);
-		TxStr_Int_Input("fixCnt",       commIdx + IDX_TDDH3_17n,  LEN_TDDH3_17n_3, m_ch[ch].part[chimNum].fixCnt);
+		TxStr_Int_Input("fixCnt",       commIdx + IDX_TDDH3_17n,  LEN_TDDH3_17n_3, m_ch[ch].item[i].fixCnt);
 	}
 
 	// 테일러 (CRC)
-	uint16_t crcidx = (chimNum - 1) * IDX_TDDH3_CYCLE + IDX_TDDH3_17n + LEN_TDDH3_17n_3;
+	uint16_t crcidx = m_ch[ch].itemNum * IDX_TDDH3_CYCLE + IDX_TDDH3_11n;
     append_crc16(txAllBuff, crcidx);
-    m_Gcmd.txCnt = crcidx+2;
+    m_Gcmd.txCnt = crcidx+LEN_CRC;
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	TX_Memo(ID_TDDH_3);
@@ -727,33 +743,33 @@ void Tx_4_TFDH(uint8_t ch)
 
 	// 공통 헤더
 	TxStr_Str_Input("cmd",            IDX_COMM_1,    LEN_COMM_1_4,      CMD_TFDH);
-	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      m_ch[ch].workPlaceCode);
-	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,    LEN_COMM_3_3,      m_ch[ch].chimCode);
-	TxStr_Int_Input("allLan",         IDX_COMM_4,    LEN_COMM_4_4,      TOTAL_LEN_TFDH4(chimNum));
+	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      workPlaceCode);
+	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,    LEN_COMM_3_3,      ch);
+	TxStr_Int_Input("allLan",         IDX_COMM_4,    LEN_COMM_4_4,      TOTAL_LEN_TFDH4(m_ch[ch].itemNum));
 	TxStr_TxMode_Input("transferMode",  IDX_COMM_5,    LEN_COMM_5_3,      m_ch[ch].transferMode);
 
 	// 바디 (고정)
 	TxStr_Int_Input("measureTime",  IDX_TFDH4_6,   LEN_TFDH4_6_10,    m_ch[ch].measureTime);
-	TxStr_Int_Input("measureQty",   IDX_TFDH4_7,   LEN_TFDH4_7_2,     m_ch[ch].measureQty);
+	TxStr_Int_Input("measureQty",   IDX_TFDH4_7,   LEN_TFDH4_7_2,     m_ch[ch].itemNum);
 
 	// 바디 (가변)
 	int commIdx;
-	for(int i = 0; i < chimNum; i++)
+	for(int i = 0; i < m_ch[ch].itemNum; i++)
 	{
 		commIdx = i * IDX_TFDH4_CYCLE;
 
-		TxStr_Faci_Input("facCode",        commIdx + IDX_TFDH4_8n,   LEN_TFDH4_8n_5,  m_ch[ch].part[chimNum].facCode);
-		TxStr_Item_Code_Input("itemCode",  commIdx + IDX_TFDH4_9n,   LEN_TFDH4_9n_1,  m_ch[ch].part[chimNum].itemCode);
-		TxStr_float_Input("measureValue",  commIdx + IDX_TFDH4_10n,  LEN_TFDH4_10n_6, m_ch[ch].part[chimNum].measureValue);
-		TxStr_Int_Input("measureStatus",   commIdx + IDX_TFDH4_11n,  LEN_TFDH4_11n_1, m_ch[ch].part[chimNum].measureStatus);
-		TxStr_Int_Input("operStatus",      commIdx + IDX_TFDH4_12n,  LEN_TFDH4_12n_1, m_ch[ch].part[chimNum].operStatus);
-		TxStr_Int_Input("protectStatus",   commIdx + IDX_TFDH4_13n,  LEN_TFDH4_13n_1, m_ch[ch].part[chimNum].protectStatus);
+		TxStr_Faci_Input("facCode",        commIdx + IDX_TFDH4_8n,   LEN_TFDH4_8n_5,  m_ch[ch].item[i].facCode);
+		TxStr_Item_Code_Input("itemCode",  commIdx + IDX_TFDH4_9n,   LEN_TFDH4_9n_1,  m_ch[ch].item[i].itemCode);
+		TxStr_float_Input("measureValue",  commIdx + IDX_TFDH4_10n,  LEN_TFDH4_10n_6, m_ch[ch].item[i].value);
+		TxStr_Int_Input("measureStatus",   commIdx + IDX_TFDH4_11n,  LEN_TFDH4_11n_1, m_ch[ch].item[i].status);
+		TxStr_Int_Input("operStatus",      commIdx + IDX_TFDH4_12n,  LEN_TFDH4_12n_1, m_ch[ch].item[i].operStatus);
+		TxStr_Int_Input("protectStatus",   commIdx + IDX_TFDH4_13n,  LEN_TFDH4_13n_1, m_ch[ch].item[i].protectStatus);
 	}
 
 	// 테일러 (CRC)
-	uint16_t crcidx = (chimNum - 1) * IDX_TFDH4_CYCLE + IDX_TFDH4_13n + LEN_TFDH4_13n_1;
+	uint16_t crcidx = m_ch[ch].itemNum* IDX_TFDH4_CYCLE + IDX_TFDH4_8n;
     append_crc16(txAllBuff, crcidx);
-    m_Gcmd.txCnt = crcidx+2;
+    m_Gcmd.txCnt = crcidx+LEN_CRC;
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	TX_Memo(ID_TFDH_4);
@@ -767,33 +783,33 @@ void Tx_5_TDUH(uint8_t ch)
 
 	// 공통 헤더
 	TxStr_Str_Input("cmd",            IDX_COMM_1,    LEN_COMM_1_4,      CMD_TDUH);
-	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      m_ch[ch].workPlaceCode);
-	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,    LEN_COMM_3_3,      m_ch[ch].chimCode);
-	TxStr_Int_Input("allLan",         IDX_COMM_4,    LEN_COMM_4_4,      TOTAL_LEN_TDUH5(chimNum));
+	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      workPlaceCode);
+	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,    LEN_COMM_3_3,      ch);
+	TxStr_Int_Input("allLan",         IDX_COMM_4,    LEN_COMM_4_4,      TOTAL_LEN_TDUH5(m_ch[ch].itemNum));
 	TxStr_TxMode_Input("transferMode",  IDX_COMM_5,    LEN_COMM_5_3,      m_ch[ch].transferMode);
 
 	// 바디 (고정)
 	TxStr_Int_Input("measureTime",  IDX_TDUH5_6,   LEN_TDUH5_6_10,    m_ch[ch].measureTime);
-	TxStr_Int_Input("measureQty",   IDX_TDUH5_7,   LEN_TDUH5_7_2,     m_ch[ch].measureQty);
+	TxStr_Int_Input("measureQty",   IDX_TDUH5_7,   LEN_TDUH5_7_2,     m_ch[ch].itemNum);
 
 	// 바디 (가변)
 	int commIdx;
-	for(int i = 0; i < chimNum; i++)
+	for(int i = 0; i < m_ch[ch].itemNum; i++)
 	{
 		commIdx = i * IDX_TDUH5_CYCLE;
 
-		TxStr_Faci_Input("facCode",        commIdx + IDX_TDUH5_8n,  LEN_TDUH5_8n_5,  m_ch[ch].part[chimNum].facCode);
-		TxStr_Item_Code_Input("itemCode",  commIdx + IDX_TDUH5_9n,      LEN_TDUH5_9n_1,  m_ch[ch].part[chimNum].itemCode);
-		TxStr_float_Input("measureValue",  commIdx + IDX_TDUH5_10n,  LEN_TDUH5_10n_6, m_ch[ch].part[chimNum].measureValue);
-		TxStr_Int_Input("measureStatus",   commIdx + IDX_TDUH5_11n,  LEN_TDUH5_11n_1, m_ch[ch].part[chimNum].measureStatus);
-		TxStr_Int_Input("operStatus",      commIdx + IDX_TDUH5_12n,  LEN_TDUH5_12n_1, m_ch[ch].part[chimNum].operStatus);
-		TxStr_Int_Input("protectStatus",   commIdx + IDX_TDUH5_13n,  LEN_TDUH5_13n_1, m_ch[ch].part[chimNum].protectStatus);
+		TxStr_Faci_Input("facCode",        commIdx + IDX_TDUH5_8n,  LEN_TDUH5_8n_5,  m_ch[ch].item[i].facCode);
+		TxStr_Item_Code_Input("itemCode",  commIdx + IDX_TDUH5_9n,      LEN_TDUH5_9n_1,  m_ch[ch].item[i].itemCode);
+		TxStr_float_Input("measureValue",  commIdx + IDX_TDUH5_10n,  LEN_TDUH5_10n_6, m_ch[ch].item[i].value);
+		TxStr_Int_Input("measureStatus",   commIdx + IDX_TDUH5_11n,  LEN_TDUH5_11n_1, m_ch[ch].item[i].status);
+		TxStr_Int_Input("operStatus",      commIdx + IDX_TDUH5_12n,  LEN_TDUH5_12n_1, m_ch[ch].item[i].operStatus);
+		TxStr_Int_Input("protectStatus",   commIdx + IDX_TDUH5_13n,  LEN_TDUH5_13n_1, m_ch[ch].item[i].protectStatus);
 	}
 
 	// 테일러 (CRC)
-	uint16_t crcidx = (chimNum - 1) * IDX_TDUH5_CYCLE + IDX_TDUH5_13n + LEN_TDUH5_13n_1;
+	uint16_t crcidx = m_ch[ch].itemNum * IDX_TDUH5_CYCLE + IDX_TDUH5_8n;
     append_crc16(txAllBuff, crcidx);
-    m_Gcmd.txCnt = crcidx+2;
+    m_Gcmd.txCnt = crcidx+LEN_CRC;
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	TX_Memo(ID_TDUH_5);
@@ -805,33 +821,43 @@ void Tx_5_TDUH(uint8_t ch)
 void Tx_6_TNOH(uint8_t ch)
 {
 
+	if(m_ch[ch].transferMode != TXMODE_HAF_NUM) return;
+
 	// 공통 헤더
 	TxStr_Str_Input("cmd",            IDX_COMM_1,    LEN_COMM_1_4,      CMD_TNOH);
-	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      m_ch[ch].workPlaceCode);
-	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,    LEN_COMM_3_3,      m_ch[ch].chimCode);
-	TxStr_Int_Input("allLan",         IDX_COMM_4,    LEN_COMM_4_4,      TOTAL_LEN_TNOH6(chimNum));
+	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      workPlaceCode);
+	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,    LEN_COMM_3_3,      ch);
 	TxStr_TxMode_Input("transferMode", IDX_COMM_5,   LEN_COMM_5_3,      m_ch[ch].transferMode);
 
 	// 바디 (고정)
 	TxStr_Int_Input("measureTime",   IDX_TNOH6_6,   LEN_TNOH6_6_10,    m_ch[ch].measureTime);
-	TxStr_Int_Input("measureQty",    IDX_TNOH6_7,   LEN_TNOH6_7_2,     m_ch[ch].measureQty);
+	TxStr_Int_Input("measureQty",    IDX_TNOH6_7,   LEN_TNOH6_7_2,     m_ch[ch].itemNum);
 
 	// 바디 (가변)
-	int commIdx;
-	for(int i = 0; i < chimNum; i++)
-	{
-		commIdx = i * IDX_TNOH6_CYCLE;
 
-		TxStr_Faci_Input("facCode",     commIdx + IDX_TNOH6_8n, LEN_TNOH6_8n_5,  m_ch[ch].part[chimNum].facCode);
-		TxStr_Item_Code_Input("itemCode", commIdx + IDX_TNOH6_9n, LEN_TNOH6_9n_1,  m_ch[ch].part[chimNum].itemCode);
-		TxStr_Int_Input("operStatus",   commIdx + IDX_TNOH6_10n, LEN_TNOH6_10n_1, m_ch[ch].part[chimNum].operStatus);
-		TxStr_Int_Input("protectStatus",  commIdx + IDX_TNOH6_11n, LEN_TNOH6_11n_1, m_ch[ch].part[chimNum].protectStatus);
+
+
+	int commIdx;
+	uint8_t cnt = 0;
+	for(int i = 0; i < m_ch[ch].itemNum; i++)
+	{
+		if(m_ch[0].item[i].protectStatus != NORMAL ||m_ch[ch].item[i].operStatus)
+		{
+			cnt++;
+			commIdx = i * IDX_TNOH6_CYCLE;
+
+			TxStr_Faci_Input("facCode",     commIdx + IDX_TNOH6_8n, LEN_TNOH6_8n_5,  m_ch[ch].item[i].facCode);
+			TxStr_Item_Code_Input("itemCode", commIdx + IDX_TNOH6_9n, LEN_TNOH6_9n_1,  m_ch[ch].item[i].itemCode);
+			TxStr_Int_Input("operStatus",   commIdx + IDX_TNOH6_10n, LEN_TNOH6_10n_1, m_ch[ch].item[i].operStatus);
+			TxStr_Int_Input("protectStatus",  commIdx + IDX_TNOH6_11n, LEN_TNOH6_11n_1, m_ch[ch].item[i].protectStatus);
+		}
 	}
+	TxStr_Int_Input("allLan",		  IDX_COMM_4,	 LEN_COMM_4_4,		TOTAL_LEN_TNOH6(cnt));
 
 	// 테일러 (CRC)
-	uint16_t crcidx = (chimNum - 1) * IDX_TNOH6_CYCLE + IDX_TNOH6_11n + LEN_TNOH6_11n_1;
+	uint16_t crcidx = cnt * IDX_TNOH6_CYCLE + IDX_TNOH6_8n;
     append_crc16(txAllBuff, crcidx);
-    m_Gcmd.txCnt = crcidx+2;
+    m_Gcmd.txCnt = crcidx+LEN_CRC;
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	TX_Memo(ID_TNOH_6);
@@ -846,8 +872,8 @@ void Tx_9_TTIM(uint8_t ch)
 
 	// 공통 헤더
 	TxStr_Str_Input("cmd",            IDX_COMM_1,    LEN_COMM_1_4,      CMD_TTIM);
-	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      m_ch[ch].workPlaceCode);
-	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,    LEN_COMM_3_3,      m_ch[ch].chimCode);
+	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      workPlaceCode);
+	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,    LEN_COMM_3_3,      ch);
 	TxStr_Int_Input("allLan",         IDX_COMM_4,    LEN_COMM_4_4,      TOTAL_LEN_TTIM9);
 
     append_crc16(txAllBuff, IDX_TTIM9_CRC);
@@ -864,8 +890,8 @@ void Tx_10_TUPG(uint8_t ch)
 {
 	// 공통 헤더
 	TxStr_Str_Input("cmd",            IDX_COMM_1,     LEN_COMM_1_4,     CMD_TUPG);
-	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,     LEN_COMM_2_7,     m_ch[ch].workPlaceCode);
-	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,     LEN_COMM_3_3,     m_ch[ch].chimCode);
+	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,     LEN_COMM_2_7,     workPlaceCode);
+	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,     LEN_COMM_3_3,     ch);
 	TxStr_Int_Input("allLan",         IDX_COMM_4,     LEN_COMM_4_4,     TOTAL_LEN_TUPG10);
 
 	// 바디
@@ -890,8 +916,8 @@ void Tx_11_TVER(uint8_t ch)
 {
 	// 공통 헤더
 	TxStr_Str_Input("cmd",            IDX_COMM_1,     LEN_COMM_1_4,     CMD_TVER);
-	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,     LEN_COMM_2_7,     m_ch[ch].workPlaceCode);
-	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,     LEN_COMM_3_3,     m_ch[ch].chimCode);
+	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,     LEN_COMM_2_7,     workPlaceCode);
+	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,     LEN_COMM_3_3,     ch);
 	TxStr_Int_Input("allLan",         IDX_COMM_4,     LEN_COMM_4_4,     TOTAL_LEN_TVER11);
 
 	// 바디
@@ -915,9 +941,9 @@ void Tx_15_TFCR(uint8_t ch)
 {
 	// 공통 헤더
 	TxStr_Str_Input("cmd",            IDX_COMM_1,     LEN_COMM_1_4,     CMD_TFCR);
-	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,     LEN_COMM_2_7,     m_ch[ch].workPlaceCode);
-	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,     LEN_COMM_3_3,     m_ch[ch].chimCode);
-	TxStr_Int_Input("allLan",         IDX_COMM_4,     LEN_COMM_4_4,     TOTAL_LEN_TFCR15(chimNum));
+	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,     LEN_COMM_2_7,     workPlaceCode);
+	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,     LEN_COMM_3_3,     ch);
+	TxStr_Int_Input("allLan",         IDX_COMM_4,     LEN_COMM_4_4,     TOTAL_LEN_TFCR15(m_ch[ch].protectRelyCnt));
 
 	// 바디 (고정)
 	TxStr_Int_Input("protectRelyCnt", IDX_TFCR15_5, LEN_TFCR15_5_2, m_ch[ch].protectRelyCnt);
@@ -933,9 +959,9 @@ void Tx_15_TFCR(uint8_t ch)
 	}
 
 	// 테일러 (CRC)
-	uint16_t crcidx = (chimNum - 1) * IDX_TFCR15_CYCLE + IDX_TFCR15_7n + LEN_TFCR15_7n_5;
+	uint16_t crcidx = m_ch[ch].itemNum* IDX_TFCR15_CYCLE + IDX_TFCR15_6n;
     append_crc16(txAllBuff, crcidx);
-    m_Gcmd.txCnt = crcidx+2;
+    m_Gcmd.txCnt = crcidx+LEN_CRC;
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	TX_Memo(ID_TFCR_15);
@@ -948,9 +974,9 @@ void Tx_21_TCN2(uint8_t ch)
 {
 	// 공통 헤더
 	TxStr_Str_Input("cmd",            IDX_COMM_1,      LEN_COMM_1_4,     CMD_TCN2);
-	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,      LEN_COMM_2_7,     m_ch[ch].workPlaceCode);
-	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,      LEN_COMM_3_3,     m_ch[ch].chimCode);
-	TxStr_Int_Input("allLan",         IDX_COMM_4,      LEN_COMM_4_4,     TOTAL_LEN_TCN2_20(chimNum));
+	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,      LEN_COMM_2_7,     workPlaceCode);
+	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,      LEN_COMM_3_3,     ch);
+	TxStr_Int_Input("allLan",         IDX_COMM_4,      LEN_COMM_4_4,     TOTAL_LEN_TCN2_20(m_ch[ch].itemNum));
 
 
 	// 바디 (고정)
@@ -965,24 +991,24 @@ void Tx_21_TCN2(uint8_t ch)
 	TxStr_Int_Input("transferMode",  IDX_TCN2_21_13,  LEN_TCN2_21_13_1,  m_ch[ch].transferMode);
 	TxStr_Int_Input("disposDelTime",    IDX_TCN2_21_14,  LEN_TCN2_21_14_3,  m_ch[ch].disposDelTime);
 	TxStr_Int_Input("protectDelTime",  IDX_TCN2_21_15,  LEN_TCN2_21_15_3,  m_ch[ch].protectDelTime);
-	TxStr_Int_Input("measureQty",  IDX_TCN2_21_16,  LEN_TCN2_21_16_2,  m_ch[ch].measureQty);
+	TxStr_Int_Input("measureQty",  IDX_TCN2_21_16,  LEN_TCN2_21_16_2,  m_ch[ch].itemNum);
 
 	// 바디 (가변)
 	int commIdx;
-	for(int i = 0; i < chimNum; i++)
+	for(int i = 0; i < m_ch[ch].itemNum; i++)
 	{
 		commIdx = i * IDX_TCN2_21_CYCLE;
 
-		TxStr_Faci_Input("facCode",   commIdx + IDX_TCN2_21_17n, LEN_TCN2_21_17_5n, m_ch[ch].part[chimNum].facCode);
-		TxStr_Item_Code_Input("itemCode", commIdx + IDX_TCN2_21_18n, LEN_TCN2_21_18_1n, m_ch[ch].part[chimNum].itemCode);
-		TxStr_float_Input("valueMin",   commIdx + IDX_TCN2_21_19n, LEN_TCN2_21_19_6n, m_ch[ch].valueMin);
-		TxStr_float_Input("valueMax",   commIdx + IDX_TCN2_21_20n, LEN_TCN2_21_20_6n, m_ch[ch].valueMax);
-		TxStr_float_Input("valueSdrd",  commIdx + IDX_TCN2_21_21n, LEN_TCN2_21_21_6n, m_ch[ch].valueSdrd);
+		TxStr_Faci_Input("facCode",   commIdx + IDX_TCN2_21_17n, LEN_TCN2_21_17_5n, m_ch[ch].item[i].facCode);
+		TxStr_Item_Code_Input("itemCode", commIdx + IDX_TCN2_21_18n, LEN_TCN2_21_18_1n, m_ch[ch].item[i].itemCode);
+		TxStr_float_Input("valueMin",   commIdx + IDX_TCN2_21_19n, LEN_TCN2_21_19_6n, m_ch[ch].item[i].rangeMin);
+		TxStr_float_Input("valueMax",   commIdx + IDX_TCN2_21_20n, LEN_TCN2_21_20_6n, m_ch[ch].item[i].rangeMax);
+		TxStr_float_Input("valueSdrd",  commIdx + IDX_TCN2_21_21n, LEN_TCN2_21_21_6n, m_ch[ch].item[i].rangeStandard);
 	}
 	// 테일러 (CRC)
-	uint16_t crcidx = (chimNum - 1) * IDX_TCN2_21_CYCLE + IDX_TCN2_21_21n + LEN_TCN2_21_21_6n;
+	uint16_t crcidx = m_ch[ch].itemNum* IDX_TCN2_21_CYCLE + IDX_TCN2_21_17n;
     append_crc16(txAllBuff, crcidx);
-    m_Gcmd.txCnt = crcidx+2;
+    m_Gcmd.txCnt = crcidx+LEN_CRC;
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	TX_Memo(ID_TCN2_20);
@@ -1251,7 +1277,7 @@ uint8_t Check_IP_Code(const uint8_t *str,  uint8_t* IPbuff, uint16_t idx, uint8_
 }
 
 
-uint32_t DAY_END(uint32_t YYMMDD)
+uint32_t MM_End_MMDD(uint32_t YYMMDD)
 {
     uint32_t YY = (YYMMDD/10000)*10000;
     uint32_t MMDD = YYMMDD/10000;
@@ -1273,40 +1299,82 @@ uint32_t DAY_END(uint32_t YYMMDD)
     }
 }
 
-#define MIN_60  60
-#define HOUR_1  100
-#define HOUR_24  2400
-#define YEAR_1  10000
-#define MON_1  100
 
 
-void Time_Cal_TOFH_2(uint32_t startDay, uint32_t endDay)
+
+uint32_t MM_End_Day(uint8_t YY, uint8_t MM)
 {
-    //startDay, endDay : YYMMDDmmhh
-    uint16_t timeBuff[288] = {0,};
-    uint16_t timeCnt = 0;
-    for(uint32_t i =startDay ;i < endDay; i=i+5)
-    {
-        if(mm(i)==MIN_60)//60분 이면
-        {
-            i -= MIN_60;
-            i += HOUR_1;//1시간 up
-        }
 
-        timeBuff[timeCnt++] = i;
+    switch (MM)
+    {
+		case 1: return 31 ; break;
+		case 2:
+			if(YY%4==0)return 29;
+			else return 28;
+		break;
+		case 3: return 31; break;
+		case 4: return 30; break;
+		case 5: return 31; break;
+		case 6: return 30; break;
+		case 7: return 31; break;
+		case 8: return 31; break;
+		case 9: return 30; break;
+		case 10: return 31; break;
+		case 11: return 30; break;
+		case 12: return 31; break;
+
     }
+    return 30;
 }
 
+void YYMMDDhhmm_Cal()
+{
+	static uint32_t timeStamp;
+
+	static uint32_t msCnt;
+	if(HAL_GetTick()-timeStamp >= 1000)
+	{
+		timeStamp = HAL_GetTick();
+		m_time.sec++;
+		if(m_time.sec==60)
+		{
+			m_time.sec = 0;
+			m_time.min++;
+			if(m_time.min==60)
+			{
+				m_time.minChange = 1;
+				m_time.min = 0;
+				m_time.hour++;
+				if(m_time.hour==24)
+				{
+					m_time.hour = 0;
+					m_time.DD++;
+					if(m_time.DD>MM_End_Day(m_time.YY, m_time.MM))
+					{
+						m_time.DD = 1;
+						m_time.MM++;
+						if(m_time.MM > 12)
+						{
+							m_time.MM = 1;
+							m_time.YY++;
+						}
+					}
+				}
+			}
+
+		}
+	}
+}
 void Day_Cal_TOFH_2(uint32_t startDay, uint32_t endDay)
 {
     //startDay, endDay : YYMMDDmmhh
     uint16_t timeCnt = 0;
-    uint32_t sYY = YY(startDay);//
-    uint32_t eYY = YY(endDay);//
-    uint32_t sMM = MM(startDay);//
-    uint32_t eMM = MM(endDay);//
-    uint32_t sDD = DD(startDay);//
-    uint32_t eDD = DD(endDay);//
+    uint32_t sYY = DAY_YY(startDay);//
+    uint32_t eYY = DAY_YY(endDay);//
+    uint32_t sMM = DAY_MM(startDay);//
+    uint32_t eMM = DAY_MM(endDay);//
+    uint32_t sDD = DAY_DD(startDay);//
+    uint32_t eDD = DAY_DD(endDay);//
     uint32_t sDay = startDay/10000;
     uint32_t eDay = endDay/10000;
     uint32_t Daybuff[4];
@@ -1315,6 +1383,39 @@ void Day_Cal_TOFH_2(uint32_t startDay, uint32_t endDay)
 
 }
 
+void TDAH_1_Config(uint8_t ch)
+{
+	if(!m_time.minChange) return;
+
+	switch (m_ch[ch].transferMode)
+	{
+		case TXMODE_HAF_NUM:
+			if(m_time.min == 0 ||m_time.min == 30)
+			{
+				m_Gcmd.txCmd = ID_TDAH_1;
+				m_time.minChange = 0;
+
+			}
+		break;
+
+		case TXMODE_FIV_NUM:
+			if(m_time.min%5 == 0)
+			{
+				m_Gcmd.txCmd = ID_TDAH_1;
+				m_time.minChange = 0;
+			}
+		break;
+
+		case TXMODE_ALL_NUM:
+			if((m_time.min == 0 ||m_time.min == 30) ||(m_time.min%5 == 0))
+			{
+				m_Gcmd.txCmd = ID_TDAH_1;
+				m_time.minChange = 0;
+			}
+		break;
+	}
+
+}
 void TOFH_2_Config(uint32_t startDay, uint32_t endDay)
 {
     //startDay, endDay : YYMMDDmmhh
@@ -1349,7 +1450,7 @@ void TOFH_2_Config(uint32_t startDay, uint32_t endDay)
 					totalDay = i;
 					break;
 				}
-				temp = DAY_END(yymmdd);
+				temp = MM_End_MMDD(yymmdd);
 				if (temp) yymmdd = temp;
 				else yymmdd++;
 
@@ -1549,6 +1650,10 @@ void Rx_Passing_10_PUPG()
     uint8_t outBuff[131] = {0,};
     uint32_t chkBuff[5] = {0,};
     uint32_t ch = 0;
+	char strData10R[10] = {0,};
+	char strData40R[40] = {0,};
+	char strData50R[50] = {0,};
+	char strData10R_2[10] = {0,};
 
     printf("RX_10_PUPG \r\n");
     if(m_Gcmd.passingCnt == TOTAL_LEN_PUPG10)
@@ -1740,15 +1845,15 @@ void Rx_Passing_14_PAST()
 
         for(int i = 0; i < itemCount; i++)
         {
-                m_ch[ch].part[i].facCode = chkBuff[i][0];
+                m_ch[ch].item[i].facCode = chkBuff[i][0];
                 printf("facCode %u \r\n",chkBuff[i][0]);
-                m_ch[ch].part[i].itemCode = chkBuff[i][1];
+                m_ch[ch].item[i].itemCode = chkBuff[i][1];
                 printf("itemCode %u \r\n",chkBuff[i][1]);
-                m_ch[ch].part[i].measureMin = chkBuff_F[i][0];
+                m_ch[ch].item[i].rangeMin = chkBuff_F[i][0];
                 printf("measureMin %f \r\n",chkBuff_F[i][0]);
-                m_ch[ch].part[i].measureMax = chkBuff_F[i][1];
+                m_ch[ch].item[i].rangeMax = chkBuff_F[i][1];
                 printf("measureMax %f \r\n",chkBuff_F[i][1]);
-                m_ch[ch].part[i].measureStandard = chkBuff_F[i][2];
+                m_ch[ch].item[i].rangeStandard = chkBuff_F[i][2];
                 printf("measureStandard %f \r\n",chkBuff_F[i][2]);
         }
         TX_ACK(ID_PAST_14);
@@ -2051,43 +2156,43 @@ void Rx_Gateway_Config()//
 	}
 }
 
-void Tx_Gateway_Config()
+void Tx_Gateway_Config(uint8_t ch)
 {
 	if(m_Gcmd.txCmd==0) return;
 
 	switch (m_Gcmd.txCmd)
 	{
 		case ID_TDAH_1 :
-			Tx_1_TDAH(0);
+			Tx_1_TDAH(ch);
 		break;
 
 		case ID_TDDH_3 :
-			Tx_3_TDDH(0);
+			Tx_3_TDDH(ch);
 		break;
 		case ID_TFDH_4 :
-			Tx_4_TFDH(0);
+			Tx_4_TFDH(ch);
 		break;
 		case ID_TDUH_5 :
-			Tx_5_TDUH(0);
+			Tx_5_TDUH(ch);
 		break;
 		case ID_TNOH_6 :
-			Tx_6_TNOH(0);
+			Tx_6_TNOH(ch);
 		break;
 		case ID_TTIM_9 :
-			Tx_9_TTIM(0);
+			Tx_9_TTIM(ch);
 		break;
 		case ID_TUPG_10:
-			Tx_10_TUPG(0);
+			Tx_10_TUPG(ch);
 		break;
 		case ID_TVER_11:
-			Tx_11_TVER(0);
+			Tx_11_TVER(ch);
 		break;
 		case ID_TFCR_15:
-			Tx_15_TFCR(0);
+			Tx_15_TFCR(ch);
 		break;
 
 		case ID_TCN2_20:
-			Tx_21_TCN2(0);
+			Tx_21_TCN2(ch);
 		break;
 	}
 
@@ -2096,16 +2201,33 @@ void Tx_Gateway_Config()
 	m_Gcmd.txCmd = 0;
 }
 
+void Gateway_Init()
+{
+	m_time.lastTxTime = 2606071100;
+	m_time.wakeUpTime = 2606091255;
+	m_time.YY = 0;
+	m_time.MM = 0;
+	m_time.DD = 0;
+	m_time.hour = 0;
+	m_time.min = 0;
+	m_time.sec = 0;
+
+	workPlaceCode = 12345;
+
+}
 void Gateway_Config()
 {
+
+	YYMMDDhhmm_Cal();
 
 	ACK_ReSend();
 	TxMsg_ReSend();
 
+	TDAH_1_Config(0);
 	TOFH_2_Config(2606051100, 2606071300);
 
 	Rx_Gateway_Config();
-	Tx_Gateway_Config();
+	Tx_Gateway_Config(0);
 }
 
 
