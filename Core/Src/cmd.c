@@ -258,34 +258,74 @@ void Rx_Passing_ACK()
 	switch (m_Gcmd.ID)
 	{
 		case ID_TOFH_2:
-			m_Gcmd.TOFH_2_Ack = 1;
+
+			if(m_ch[0].tohTotalDay > m_ch[0].tohfDayCnt)
+			{
+				m_ch[0].tohfDayCnt++;
+				m_Gcmd.txCmd = ID_TOFH_2;
+			}
+			else
+			{
+				m_Gcmd.tofhDone = 1;
+				TX_EOT();
+			}
+
 		break;
 
 		case ID_TDDH_3:
-			m_Gcmd.TDDH_3_Ack = 1;
+			if(m_ch[0].transferMode == TXMODE_ALL_NUM)
+			{
+				if(m_ch[0].itemMode == HAF_IDX && m_ch[0].itemAllFlag)
+				{
+					m_ch[0].itemAllFlag = 0;
+					m_ch[0].itemMode = FIV_IDX;
+					m_Gcmd.txCmd = ID_TDDH_3;
+				}
+				else
+				{
+					TX_EOT();
+				}
+			}
 		break;
 
 		case ID_TFDH_4:
-			m_Gcmd.TFDH_4_Ack = 1;
+
 		break;
 
 		case ID_TDUH_5:
-			m_Gcmd.TDUH_5_Ack = 1;
+
 		break;
 
 		case ID_TDAH_1 :
-			TX_EOT();
 			if(m_ch[0].transferMode == TXMODE_HAF_NUM)
 			{
+				TX_EOT();
+			}
+			else if(m_ch[0].transferMode == TXMODE_HAF_NUM)
+			{
+				TX_EOT();
 				for(int i =0 ;i < m_ch[0].itemNum; i++)
 				{
-					if((m_ch[0].item[i].protectStatus != NORMAL) ||m_ch[0].item[i].operStatus)
+					if((m_ch[0].item[i].protectStatus[HAF_IDX] != NORMAL) ||m_ch[0].item[i].operStatus[HAF_IDX])
 					{
 						m_Gcmd.txCmd = ID_TNOH_6;
 					}
 				}
 			}
+			else if(m_ch[0].transferMode == TXMODE_ALL_NUM)
+			{
+				if(m_ch[0].itemMode == HAF_IDX && m_ch[0].itemAllFlag)
+				{
+					m_ch[0].itemAllFlag = 0;
+					m_ch[0].itemMode = FIV_IDX;
+					m_Gcmd.txCmd = ID_TDAH_1;
+				}
+				else
+				{
+					TX_EOT();
+				}
 
+			}
 
 
 		break;
@@ -625,16 +665,17 @@ void Tx_1_TDAH(uint8_t ch)
 
 	// 바디 (가변)
 	int commIdx;
+	uint8_t tf_idx = m_ch[ch].itemMode;
 	for(int i = 0; i < m_ch[ch].itemNum; i++)
 	{
 		commIdx = i * IDX_TDAH1_CYCLE;
 
 		TxStr_Faci_Input("facCode",     commIdx + IDX_TDAH1_8n,  LEN_TDAH1_8n_5,  m_ch[ch].item[i].facCode);
 		TxStr_Item_Code_Input("itemCode", commIdx + IDX_TDAH1_9n,  LEN_TDAH1_9n_1,  m_ch[ch].item[i].itemCode);
-		TxStr_float_Input("measureValue", commIdx + IDX_TDAH1_10n,  LEN_TDAH1_10n_6, m_ch[ch].item[i].value);
-		TxStr_Int_Input("measureStatus",  commIdx + IDX_TDAH1_11n,  LEN_TDAH1_11n_1, m_ch[ch].item[i].status);
-		TxStr_Int_Input("operStatus",     commIdx + IDX_TDAH1_12n,  LEN_TDAH1_12n_1, m_ch[ch].item[i].operStatus);
-		TxStr_Int_Input("protectStatus",    commIdx + IDX_TDAH1_13n,  LEN_TDAH1_13n_1, m_ch[ch].item[i].protectStatus);
+		TxStr_float_Input("measureValue", commIdx + IDX_TDAH1_10n,  LEN_TDAH1_10n_6, m_ch[ch].item[i].value[tf_idx]);
+		TxStr_Int_Input("measureStatus",  commIdx + IDX_TDAH1_11n,  LEN_TDAH1_11n_1, m_ch[ch].item[i].status[tf_idx]);
+		TxStr_Int_Input("operStatus",     commIdx + IDX_TDAH1_12n,  LEN_TDAH1_12n_1, m_ch[ch].item[i].operStatus[tf_idx]);
+		TxStr_Int_Input("protectStatus",    commIdx + IDX_TDAH1_13n,  LEN_TDAH1_13n_1, m_ch[ch].item[i].protectStatus[tf_idx]);
 	}
 
 	// 테일러 (CRC)
@@ -651,8 +692,9 @@ void Tx_1_TDAH(uint8_t ch)
 // ========================================================================================
 // [2] 전원단절구간자료 전송 (TOFH) - 가변 구조
 // ========================================================================================
-void Tx_2_TOFH(uint8_t ch, uint32_t pwOffDay, uint16_t startTime, uint16_t endTime, uint8_t mode)
+void Tx_2_TOFH(uint8_t ch)
 {
+	if(m_Gcmd.tofhDone) return; // 처음 한번만 사용하고 다음엔 사용안함
 
 	// 공통 헤더
 	TxStr_Str_Input("cmd",            IDX_COMM_1,    LEN_COMM_1_4,      CMD_TOFH);
@@ -660,12 +702,20 @@ void Tx_2_TOFH(uint8_t ch, uint32_t pwOffDay, uint16_t startTime, uint16_t endTi
 	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,    LEN_COMM_3_3,      ch);
 	TxStr_TxMode_Input("transferMode", IDX_COMM_5,    LEN_COMM_5_3,      m_ch[ch].transferMode);
 
+	uint8_t dayCnt = m_ch[ch].tohfDayCnt;
+
 	// 바디 (고정)
-	TxStr_Int_Input("powerOffDay",  IDX_TOFH2_6,   LEN_TOFH2_6_8,     pwOffDay);
+	TxStr_Int_Input("powerOffDay",  IDX_TOFH2_6,   LEN_TOFH2_6_8,     m_ch[ch].tohfDayBuff[dayCnt]);
 	// 바디 (가변)
 	int commIdx = 0;
 	uint16_t idxCnt = 0;
-	for(int i = startTime; i <= endTime; i =i+mode)
+	uint8_t tfMode;
+	if(m_ch[ch].transferMode == TXMODE_FIV_NUM) tfMode = 5;
+	if(m_ch[ch].transferMode == TXMODE_HAF_NUM) tfMode = 30;
+	uint16_t startTime = m_ch[ch].tohfTimeSE[dayCnt][0];
+	uint16_t endTime = m_ch[ch].tohfTimeSE[dayCnt][1];
+
+	for(int i = startTime; i <= endTime; i =i+tfMode)
 	{
 		if((i % 100) >= 60)
 		{
@@ -686,6 +736,7 @@ void Tx_2_TOFH(uint8_t ch, uint32_t pwOffDay, uint16_t startTime, uint16_t endTi
     m_Gcmd.txCnt = crcidx+LEN_CRC;
 	HAL_UART_Transmit(&huart1, (uint8_t*)txAllBuff, m_Gcmd.txCnt, 100);
 	Save_30Day_2_TOFH();
+	TX_Memo(ID_TOFH_2);
 	printf("> END \r\n");
 }
 
@@ -712,17 +763,18 @@ void Tx_3_TDDH(uint8_t ch)
 
 	// 바디 (가변)
 	int commIdx;
+	uint8_t tf_idx = m_ch[ch].itemMode;
 	for(int i = 0; i < m_ch[ch].itemNum; i++)
 	{
 		commIdx = i * IDX_TDDH3_CYCLE;
 
 		TxStr_Faci_Input("facCode",     commIdx + IDX_TDDH3_11n,  LEN_TDDH3_11n_5, m_ch[ch].item[i].facCode);
 		TxStr_Item_Code_Input("itemCode", commIdx + IDX_TDDH3_12n,  LEN_TDDH3_12n_1, m_ch[ch].item[i].itemCode);
-		TxStr_Int_Input("nomalCnt",     commIdx + IDX_TDDH3_13n,  LEN_TDDH3_13n_3, m_ch[ch].item[i].nomalCnt );
-		TxStr_Int_Input("FultCnt",      commIdx + IDX_TDDH3_14n,  LEN_TDDH3_14n_3, m_ch[ch].item[i].FultCnt);
-		TxStr_Int_Input("commuErrCnt",  commIdx + IDX_TDDH3_15n,  LEN_TDDH3_15n_3, m_ch[ch].item[i].commuErrCnt);
-		TxStr_Int_Input("powerOffCnt",  commIdx + IDX_TDDH3_16n,  LEN_TDDH3_16n_3, m_ch[ch].powerOffCnt);
-		TxStr_Int_Input("fixCnt",       commIdx + IDX_TDDH3_17n,  LEN_TDDH3_17n_3, m_ch[ch].item[i].fixCnt);
+		TxStr_Int_Input("nomalCnt",     commIdx + IDX_TDDH3_13n,  LEN_TDDH3_13n_3, m_ch[ch].item[i].nomalCnt[tf_idx] );
+		TxStr_Int_Input("FultCnt",      commIdx + IDX_TDDH3_14n,  LEN_TDDH3_14n_3, m_ch[ch].item[i].FultCnt[tf_idx]);
+		TxStr_Int_Input("commuErrCnt",  commIdx + IDX_TDDH3_15n,  LEN_TDDH3_15n_3, m_ch[ch].item[i].commuErrCnt[tf_idx]);
+		TxStr_Int_Input("powerOffCnt",  commIdx + IDX_TDDH3_16n,  LEN_TDDH3_16n_3, m_ch[ch].item[i].powerOffCnt[tf_idx]);
+		TxStr_Int_Input("fixCnt",       commIdx + IDX_TDDH3_17n,  LEN_TDDH3_17n_3, m_ch[ch].item[i].fixCnt[tf_idx]);
 	}
 
 	// 테일러 (CRC)
@@ -743,6 +795,9 @@ void Tx_4_TFDH(uint8_t ch)
 
 	// 공통 헤더
 	TxStr_Str_Input("cmd",            IDX_COMM_1,    LEN_COMM_1_4,      CMD_TFDH);
+	TOTAL_LEN_TFDH4(m_ch[ch].itemNum);
+
+
 	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      workPlaceCode);
 	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,    LEN_COMM_3_3,      ch);
 	TxStr_Int_Input("allLan",         IDX_COMM_4,    LEN_COMM_4_4,      TOTAL_LEN_TFDH4(m_ch[ch].itemNum));
@@ -754,16 +809,17 @@ void Tx_4_TFDH(uint8_t ch)
 
 	// 바디 (가변)
 	int commIdx;
+	uint8_t tf_idx = m_ch[ch].itemMode;
 	for(int i = 0; i < m_ch[ch].itemNum; i++)
 	{
 		commIdx = i * IDX_TFDH4_CYCLE;
 
 		TxStr_Faci_Input("facCode",        commIdx + IDX_TFDH4_8n,   LEN_TFDH4_8n_5,  m_ch[ch].item[i].facCode);
 		TxStr_Item_Code_Input("itemCode",  commIdx + IDX_TFDH4_9n,   LEN_TFDH4_9n_1,  m_ch[ch].item[i].itemCode);
-		TxStr_float_Input("measureValue",  commIdx + IDX_TFDH4_10n,  LEN_TFDH4_10n_6, m_ch[ch].item[i].value);
-		TxStr_Int_Input("measureStatus",   commIdx + IDX_TFDH4_11n,  LEN_TFDH4_11n_1, m_ch[ch].item[i].status);
-		TxStr_Int_Input("operStatus",      commIdx + IDX_TFDH4_12n,  LEN_TFDH4_12n_1, m_ch[ch].item[i].operStatus);
-		TxStr_Int_Input("protectStatus",   commIdx + IDX_TFDH4_13n,  LEN_TFDH4_13n_1, m_ch[ch].item[i].protectStatus);
+		TxStr_float_Input("measureValue",  commIdx + IDX_TFDH4_10n,  LEN_TFDH4_10n_6, m_ch[ch].item[i].value[tf_idx]);
+		TxStr_Int_Input("measureStatus",   commIdx + IDX_TFDH4_11n,  LEN_TFDH4_11n_1, m_ch[ch].item[i].status[tf_idx]);
+		TxStr_Int_Input("operStatus",      commIdx + IDX_TFDH4_12n,  LEN_TFDH4_12n_1, m_ch[ch].item[i].operStatus[tf_idx]);
+		TxStr_Int_Input("protectStatus",   commIdx + IDX_TFDH4_13n,  LEN_TFDH4_13n_1, m_ch[ch].item[i].protectStatus[tf_idx]);
 	}
 
 	// 테일러 (CRC)
@@ -794,16 +850,17 @@ void Tx_5_TDUH(uint8_t ch)
 
 	// 바디 (가변)
 	int commIdx;
+	uint8_t tf_idx = m_ch[ch].itemMode;
 	for(int i = 0; i < m_ch[ch].itemNum; i++)
 	{
 		commIdx = i * IDX_TDUH5_CYCLE;
 
 		TxStr_Faci_Input("facCode",        commIdx + IDX_TDUH5_8n,  LEN_TDUH5_8n_5,  m_ch[ch].item[i].facCode);
 		TxStr_Item_Code_Input("itemCode",  commIdx + IDX_TDUH5_9n,      LEN_TDUH5_9n_1,  m_ch[ch].item[i].itemCode);
-		TxStr_float_Input("measureValue",  commIdx + IDX_TDUH5_10n,  LEN_TDUH5_10n_6, m_ch[ch].item[i].value);
-		TxStr_Int_Input("measureStatus",   commIdx + IDX_TDUH5_11n,  LEN_TDUH5_11n_1, m_ch[ch].item[i].status);
-		TxStr_Int_Input("operStatus",      commIdx + IDX_TDUH5_12n,  LEN_TDUH5_12n_1, m_ch[ch].item[i].operStatus);
-		TxStr_Int_Input("protectStatus",   commIdx + IDX_TDUH5_13n,  LEN_TDUH5_13n_1, m_ch[ch].item[i].protectStatus);
+		TxStr_float_Input("measureValue",  commIdx + IDX_TDUH5_10n,  LEN_TDUH5_10n_6, m_ch[ch].item[i].value[tf_idx]);
+		TxStr_Int_Input("measureStatus",   commIdx + IDX_TDUH5_11n,  LEN_TDUH5_11n_1, m_ch[ch].item[i].status[tf_idx]);
+		TxStr_Int_Input("operStatus",      commIdx + IDX_TDUH5_12n,  LEN_TDUH5_12n_1, m_ch[ch].item[i].operStatus[tf_idx]);
+		TxStr_Int_Input("protectStatus",   commIdx + IDX_TDUH5_13n,  LEN_TDUH5_13n_1, m_ch[ch].item[i].protectStatus[tf_idx]);
 	}
 
 	// 테일러 (CRC)
@@ -827,7 +884,7 @@ void Tx_6_TNOH(uint8_t ch)
 	TxStr_Str_Input("cmd",            IDX_COMM_1,    LEN_COMM_1_4,      CMD_TNOH);
 	TxStr_Int_Input("workPlaceCode",  IDX_COMM_2,    LEN_COMM_2_7,      workPlaceCode);
 	TxStr_chimCode_Input("chimCode",  IDX_COMM_3,    LEN_COMM_3_3,      ch);
-	TxStr_TxMode_Input("transferMode", IDX_COMM_5,   LEN_COMM_5_3,      m_ch[ch].transferMode);
+	TxStr_TxMode_Input("transferMode", IDX_COMM_5,   LEN_COMM_5_3,      TXMODE_HAF_NUM);
 
 	// 바디 (고정)
 	TxStr_Int_Input("measureTime",   IDX_TNOH6_6,   LEN_TNOH6_6_10,    m_ch[ch].measureTime);
@@ -838,18 +895,19 @@ void Tx_6_TNOH(uint8_t ch)
 
 
 	int commIdx;
+	uint8_t tf_idx = m_ch[ch].itemMode;
 	uint8_t cnt = 0;
 	for(int i = 0; i < m_ch[ch].itemNum; i++)
 	{
-		if(m_ch[0].item[i].protectStatus != NORMAL ||m_ch[ch].item[i].operStatus)
+		if(m_ch[0].item[i].protectStatus[tf_idx] != NORMAL ||m_ch[ch].item[i].operStatus[tf_idx])
 		{
 			cnt++;
 			commIdx = i * IDX_TNOH6_CYCLE;
 
 			TxStr_Faci_Input("facCode",     commIdx + IDX_TNOH6_8n, LEN_TNOH6_8n_5,  m_ch[ch].item[i].facCode);
 			TxStr_Item_Code_Input("itemCode", commIdx + IDX_TNOH6_9n, LEN_TNOH6_9n_1,  m_ch[ch].item[i].itemCode);
-			TxStr_Int_Input("operStatus",   commIdx + IDX_TNOH6_10n, LEN_TNOH6_10n_1, m_ch[ch].item[i].operStatus);
-			TxStr_Int_Input("protectStatus",  commIdx + IDX_TNOH6_11n, LEN_TNOH6_11n_1, m_ch[ch].item[i].protectStatus);
+			TxStr_Int_Input("operStatus",   commIdx + IDX_TNOH6_10n, LEN_TNOH6_10n_1, m_ch[ch].item[i].operStatus[tf_idx]);
+			TxStr_Int_Input("protectStatus",  commIdx + IDX_TNOH6_11n, LEN_TNOH6_11n_1, m_ch[ch].item[i].protectStatus[tf_idx]);
 		}
 	}
 	TxStr_Int_Input("allLan",		  IDX_COMM_4,	 LEN_COMM_4_4,		TOTAL_LEN_TNOH6(cnt));
@@ -877,7 +935,7 @@ void Tx_9_TTIM(uint8_t ch)
 	TxStr_Int_Input("allLan",         IDX_COMM_4,    LEN_COMM_4_4,      TOTAL_LEN_TTIM9);
 
     append_crc16(txAllBuff, IDX_TTIM9_CRC);
-    m_Gcmd.txCnt = IDX_TTIM9_CRC+2;
+    m_Gcmd.txCnt = IDX_TTIM9_CRC+LEN_CRC;
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	TX_Memo(ID_TTIM_9);
@@ -903,7 +961,7 @@ void Tx_10_TUPG(uint8_t ch)
 	TxStr_Str_Input("heshCode",    IDX_TUPG10_10,  LEN_TUPG10_10_32,  m_ch[ch].heshCode);
     append_crc16(txAllBuff, IDX_TUPG10_CRC);
 
-    m_Gcmd.txCnt = IDX_TUPG10_CRC+2;
+    m_Gcmd.txCnt = IDX_TUPG10_CRC+LEN_CRC;
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	TX_Memo(ID_TUPG_10);
@@ -928,7 +986,7 @@ void Tx_11_TVER(uint8_t ch)
 	TxStr_Str_Input("fwVer",       IDX_TVER11_9,   LEN_TVER11_9_20,  m_ch[ch].fwVer);
 	TxStr_Str_Input("heshCode",    IDX_TVER11_10,  LEN_TVER11_10_32,  m_ch[ch].heshCode);
 	append_crc16(txAllBuff, IDX_TVER11_CRC);
-    m_Gcmd.txCnt = IDX_TVER11_CRC+2;
+    m_Gcmd.txCnt = IDX_TVER11_CRC+LEN_CRC;
 	HAL_UART_Transmit(&huart1, txAllBuff, m_Gcmd.txCnt, 100);
 	printf("> END \r\n");
 	TX_Memo(ID_TVER_11);
@@ -1385,126 +1443,124 @@ void Day_Cal_TOFH_2(uint32_t startDay, uint32_t endDay)
 
 void TDAH_1_Config(uint8_t ch)
 {
-	if(!m_time.minChange) return;
-
-	switch (m_ch[ch].transferMode)
+	if(m_time.minChange &&(m_time.min%5 == 0))
 	{
-		case TXMODE_HAF_NUM:
-			if(m_time.min == 0 ||m_time.min == 30)
-			{
-				m_Gcmd.txCmd = ID_TDAH_1;
-				m_time.minChange = 0;
 
-			}
-		break;
+		switch (m_ch[ch].transferMode)
+		{
+			case TXMODE_HAF_NUM:
+				if(m_time.min == 0 ||m_time.min == 30)
+				{
+					m_Gcmd.txCmd = ID_TDAH_1;
+					m_time.minChange = 0;
+					m_ch[ch].itemMode = HAF_IDX;
+				}
+			break;
 
-		case TXMODE_FIV_NUM:
-			if(m_time.min%5 == 0)
-			{
-				m_Gcmd.txCmd = ID_TDAH_1;
-				m_time.minChange = 0;
-			}
-		break;
+			case TXMODE_FIV_NUM:
+				if(m_time.min%5 == 0)
+				{
+					m_Gcmd.txCmd = ID_TDAH_1;
+					m_time.minChange = 0;
+					m_ch[ch].itemMode = FIV_IDX;
+				}
+			break;
 
-		case TXMODE_ALL_NUM:
-			if((m_time.min == 0 ||m_time.min == 30) ||(m_time.min%5 == 0))
-			{
-				m_Gcmd.txCmd = ID_TDAH_1;
-				m_time.minChange = 0;
-			}
-		break;
+			case TXMODE_ALL_NUM:
+				if(m_time.min%5 == 0)
+				{
+					m_Gcmd.txCmd = ID_TDAH_1;
+					m_time.minChange = 0;
+					m_ch[ch].itemMode = HAF_IDX;
+					if(m_time.min == 0 ||m_time.min == 30)
+					{
+						m_ch[ch].itemAllFlag = 1;
+					}
+				}
+
+			break;
+		}
 	}
 
 }
-void TOFH_2_Config(uint32_t startDay, uint32_t endDay)
+void TOFH_2_Config(uint8_t ch)
 {
     //startDay, endDay : YYMMDDmmhh
+
+
+    uint32_t startDay = 2606051100; //읽어오기
+    uint32_t endDay = 2606071300; // 읽어오기
+
     uint32_t sDay = startDay/10000;
     uint32_t eDay = endDay/10000;
     uint32_t sTime = startDay%10000;
     uint32_t eTime = endDay%10000;
-	uint32_t ssTime,eeTime;
 
-    static uint8_t totalDay = 0;
-    static uint16_t TimeSE[4][2]= {{0,2355},{0,2355},{0,2355},{0,2355}};
-    static uint32_t DayBuff[4] = {0,};
-    static uint8_t dayCnt = 0;
-    static uint8_t reTry = 0xff;
+    uint16_t TimeSE[4][2]= {{0,2355},{0,2355},{0,2355},{0,2355}};
+
     uint32_t temp;
     uint32_t yymmdd = sDay;
 	static uint32_t timeStamp;
 
-	if(m_Gcmd.tofhDone) return; // 처음 한번만 사용하고 다음엔 사용안함
 
-	static uint8_t step = STEP0;
-	switch (step)
+
+
+	memcpy(m_ch[ch].tohfTimeSE, TimeSE, sizeof(m_ch[ch].tohfTimeSE));
+
+
+	m_ch[ch].tohfTimeSE[0][0] = sTime;
+	for(int i =0 ;i < 4;i++)
 	{
-		case STEP0:
-			TimeSE[0][0] = sTime;
-			for(int i =0 ;i < 4;i++)
-			{
-				DayBuff[i] = yymmdd;
-				if(yymmdd == eDay)
-				{
-					TimeSE[i][1] = eTime;
-					totalDay = i;
-					break;
-				}
-				temp = MM_End_MMDD(yymmdd);
-				if (temp) yymmdd = temp;
-				else yymmdd++;
-
-			}
-			step = STEP1;
-		break;
-
-		case STEP1:
-			Tx_2_TOFH(0, DayBuff[dayCnt], TimeSE[dayCnt][0], TimeSE[dayCnt][1], 5);
-			m_Gcmd.TOFH_2_Ack = 0;
-			timeStamp = HAL_GetTick();
-			step = STEP2;
-		break;
-
-		case STEP2:
-			if(m_Gcmd.TOFH_2_Ack)
-			{
-				if(dayCnt < totalDay)
-				{
-					dayCnt++;
-					step = STEP1;
-				}
-				else m_Gcmd.tofhDone = 1;
-
-			}
-			else if(HAL_GetTick()-timeStamp >= 30000)
-			{
-				if(reTry == dayCnt)
-				{
-					if(dayCnt < totalDay)
-					{
-						dayCnt++; // 한번 보냈던 거면 재시도는 안함
-						step = STEP1;
-					}
-					else m_Gcmd.tofhDone = 1;
-				}
-				else
-				{
-					step = STEP1;
-				}
-
-				reTry = dayCnt;
-			}
-		break;
+		m_ch[ch].tohfDayBuff[i] = yymmdd;
+		if(yymmdd == eDay)
+		{
+			m_ch[ch].tohfTimeSE[i][1] = eTime;
+			m_ch[ch].tohTotalDay = i;
+			break;
+		}
+		temp = MM_End_MMDD(yymmdd);
+		if (temp) yymmdd = temp;
+		else yymmdd++;
 
 	}
 
-
-	if(m_Gcmd.tofhDone)TX_EOT();
+	m_Gcmd.txCmd = ID_TOFH_2;
 
 
 }
 
+void TDDH_3_Config(uint8_t ch)
+{
+	if(m_time.hour == 0 && m_time.min == 0)
+	{
+		m_Gcmd.txCmd = ID_TDDH_3;
+		m_time.minChange = 0;
 
+		switch (m_ch[ch].transferMode)
+		{
+			case TXMODE_HAF_NUM:
+				m_ch[ch].itemMode = HAF_IDX;
+			break;
+
+			case TXMODE_FIV_NUM:
+				m_ch[ch].itemMode = FIV_IDX;
+			break;
+
+			case TXMODE_ALL_NUM:
+				m_ch[ch].itemMode = HAF_IDX;
+				m_ch[ch].itemAllFlag = 1;
+			break;
+		}
+
+	}
+
+}
+
+uint8_t TFDH_4_Buff[3][80]; // item 세개 까지
+void TFDH_4_Config(uint8_t ch)
+{
+
+}
 
 
 
@@ -1531,10 +1587,10 @@ void Rx_Passing_5_PDUH()
 
         printf("> OK\r\n");
 
-        m_ch[ch].startTime = chkBuff[0];
-        printf("startTime %u \r\n",chkBuff[0]);
-        m_ch[ch].endTime = chkBuff[1];
-        printf("endTime %u \r\n",chkBuff[1]);
+        m_ch[ch].startDay= chkBuff[0];
+        printf("startDay %u \r\n",chkBuff[0]);
+        m_ch[ch].endDay = chkBuff[1];
+        printf("endDay %u \r\n",chkBuff[1]);
 
         TX_ACK(ID_PDUH_5);
     }
@@ -1629,10 +1685,22 @@ void Rx_Passing_9_PTIM()
         if(Check_crc16(m_Gcmd.passingBuff, IDX_PTIM9_CRC))return;
         printf("> OK\r\n");
 
-        m_ch[ch].sevrDay = chkBuff[0];
         printf("sevrDay %u \r\n",chkBuff[0]);
-        m_ch[ch].sevrTime = chkBuff[1];
         printf("sevrTime %u \r\n",chkBuff[1]);
+        uint32_t gwDay = DAY_YYMMDD(m_time.YY,m_time.MM,m_time.DD);
+        uint32_t gwTime =DAY_hhmmss(m_time.hour,m_time.min,m_time.sec);
+		if(chkBuff[0] != gwDay)
+		{
+			m_time.YY = DAY_YY(chkBuff[0]);
+			m_time.MM = DAY_MM(chkBuff[0]);
+			m_time.DD = DAY_DD(chkBuff[0]);
+		}
+		if(abs(chkBuff[1] - gwTime) >= 5)
+		{
+			m_time.hour = DAY_hh(chkBuff[1]);
+			m_time.min = DAY_mm(chkBuff[1]);
+			m_time.sec = DAY_ss(chkBuff[1]);
+		}
         TX_ACK(ID_PTIM_9);
     }
     else
@@ -1745,10 +1813,17 @@ void Rx_Passing_12_PSET()
         if(Check_crc16(m_Gcmd.passingBuff, IDX_PSET12_CRC))return;
         printf("> OK\r\n");
 
-        m_ch[ch].sevrDay = chkBuff[0];
         printf("sevrDay %u \r\n",chkBuff[0]);
-        m_ch[ch].sevrTime = chkBuff[1];
         printf("sevrTime %u \r\n",chkBuff[1]);
+
+
+		m_time.YY = DAY_YY(chkBuff[0]);
+		m_time.MM = DAY_MM(chkBuff[0]);
+		m_time.DD = DAY_DD(chkBuff[0]);
+		m_time.hour = DAY_hh(chkBuff[1]);
+		m_time.min = DAY_mm(chkBuff[1]);
+		m_time.sec = DAY_ss(chkBuff[1]);
+
         TX_ACK(ID_PSET_12);
 
     }
@@ -2166,6 +2241,10 @@ void Tx_Gateway_Config(uint8_t ch)
 			Tx_1_TDAH(ch);
 		break;
 
+		case ID_TOFH_2 :
+			Tx_2_TOFH(ch);
+		break;
+
 		case ID_TDDH_3 :
 			Tx_3_TDDH(ch);
 		break;
@@ -2213,6 +2292,7 @@ void Gateway_Init()
 	m_time.sec = 0;
 
 	workPlaceCode = 12345;
+	TOFH_2_Config(0);
 
 }
 void Gateway_Config()
@@ -2224,7 +2304,8 @@ void Gateway_Config()
 	TxMsg_ReSend();
 
 	TDAH_1_Config(0);
-	TOFH_2_Config(2606051100, 2606071300);
+	TDDH_3_Config(0);
+
 
 	Rx_Gateway_Config();
 	Tx_Gateway_Config(0);

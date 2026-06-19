@@ -45,12 +45,17 @@
 #define   TOTAL_LEN_TCN2_20(N)   	 (155+24*N)
 
 //YYMMDDhhmm
-#define DAY_YY(T) (((T) / 100000000) % 100)
-#define DAY_MM(T) (((T) / 1000000) % 100)
-#define DAY_DD(T) (((T) / 10000) % 100)
-#define DAY_hh(T) (((T) / 100) % 100)
-#define DAY_mm(T) ((T) % 100)
 
+#define DAY_YY(T) (((T) / 10000) % 100)
+#define DAY_MM(T) (((T) / 100) % 100)
+#define DAY_DD(T) ((T) % 100)
+
+#define DAY_hh(T) (((T) / 10000) % 100)
+#define DAY_mm(T) (((T) / 100) % 100)
+#define DAY_ss(T) ((T) % 100)
+
+#define DAY_YYMMDD(YY,MM,DD)	(YY*10000 + MM*100 + DD)
+#define DAY_hhmmss(hh,mm,ss)	(hh*10000 + mm*100 + ss)
 
 
 
@@ -150,6 +155,11 @@
 #define	TXMODE_HAF_NUM      0
 #define	TXMODE_FIV_NUM	    1
 #define	TXMODE_ALL_NUM 	    2
+
+#define	HAF_IDX      0
+#define	FIV_IDX	    1
+
+
 
 #define	MSG_ACK      0x06
 #define	MSG_NAK      0x15
@@ -693,9 +703,6 @@ typedef struct
 	uint8_t ID;
 	uint8_t txCmd;
 	uint8_t TOFH_2_Ack;
-	uint8_t TDDH_3_Ack;
-	uint8_t TFDH_4_Ack;
-	uint8_t TDUH_5_Ack;
 	uint8_t tofhDone;
 
 	uint8_t stepNoneAck;
@@ -721,15 +728,16 @@ typedef struct
 {
 	uint32_t facCode;//시설코드 [1][4][5][6][13]
 	uint8_t itemCode;//항목코드 [1][4][5][6]
-	float value;//측정값 [1][4][5]
-	uint8_t status;//자료상태 [1][4][5]
-	uint8_t operStatus;//가동상태 [1][4][5][6]
-	uint8_t protectStatus;//배출시설 정상여부 [1][4][5][6]
+	float value[2];//측정값 [1][4][5]
+	uint8_t status[2];//자료상태 [1][4][5]
+	uint8_t operStatus[2];//가동상태 [1][4][5][6]
+	uint8_t protectStatus[2];//배출시설 정상여부 [1][4][5][6]
 
-	uint16_t nomalCnt;//정상건수[3]
-	uint16_t FultCnt;//비정상건수[3]
-	uint16_t commuErrCnt;//통신불량[3]
-	uint16_t fixCnt;//점검중건수[3]
+	uint16_t nomalCnt[2];//정상건수[3]
+	uint16_t FultCnt[2];//비정상건수[3]
+	uint16_t commuErrCnt[2];//통신불량[3]
+	uint16_t fixCnt[2];//점검중건수[3]
+	uint16_t powerOffCnt[2];//전원단절 건수[2][3]
 	float rangeMin;//측정범위 최소값[14]
 	float rangeMax;//측정범위 최대값[14]
 	float rangeStandard;//측정범위 기준값[14]
@@ -742,10 +750,11 @@ typedef struct
 	uint16_t allLan;//전체길이[공통]
 	uint32_t measureTime;//측정시간[공통] // YYMMDDhhmm
 	uint8_t itemNum;
+	uint8_t itemMode;
+	uint8_t itemAllFlag;
 	PART_T item[5];//항목
 
 	uint32_t powerOffDay;//전원단절 기준일자 yyyyMMDD[2]
-	uint16_t powerOffCnt;//전원단절 건수[2][3]
 	uint32_t closeDate;
 	uint16_t dayCnt;
 	uint16_t TDAHcnt;//TDAH건수[3]
@@ -776,8 +785,12 @@ typedef struct
 	uint8_t transferMode;//[21][공통][18]
 	uint32_t sevrDay; // 서버 날짜 6자리 YYMMDD
 	uint32_t sevrTime;// 서버시간 6자리 hhmmss [9][12]
-    uint32_t startTime;//시작일시[5]
-    uint32_t endTime;//끝일시[5]
+    uint32_t startDay;//시작일시[5]
+    uint32_t endDay;//끝일시[5]
+    uint8_t tohTotalDay;
+    uint16_t tohfTimeSE[4][2];
+    uint32_t tohfDayBuff[4];
+    uint8_t tohfDayCnt;
 } CHIMNEY_T;
 
 
