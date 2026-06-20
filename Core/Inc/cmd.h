@@ -819,12 +819,13 @@ void Uart_Init();
 void UartRx1DataProcess();
 void UartRx2DataProcess();
 void UartRx3DataProcess();
-
-
-/*  			function end  			*/
 void Uart_Gulobal();
 void Test_Config();
 void Testfunction();
+uint8_t strtol_n(const uint8_t *str, uint32_t * data, uint16_t idx, int n,  uint32_t min, uint32_t max, uint8_t viewAdd);
+
+
+/*  			function end  			*/
 
 
 /*  			extern start  			*/
