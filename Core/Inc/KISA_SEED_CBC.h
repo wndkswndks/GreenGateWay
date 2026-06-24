@@ -42,13 +42,13 @@ extern "C" {
 
 #include <stdint.h>
 
-//typedef unsigned int        DWORD;
+//typedef unsigned int        DWORd;
 //typedef unsigned short      WORD;
 //typedef unsigned char       BYTE;
 
 
 
-typedef uint32_t        DWORD;
+typedef uint32_t        DWORd; //중복때문에 마지막 소문자
 typedef uint16_t      WORD;
 typedef unsigned char       BYTE;
 
@@ -66,7 +66,7 @@ typedef enum _SEED_ENC_DEC
 #define _KISA_SEED_KEY_
 typedef struct kisa_seed_key_st
 {
-	DWORD key_data[32];
+	DWORd key_data[32];
 } KISA_SEED_KEY;
 #endif
 
@@ -75,11 +75,11 @@ typedef struct kisa_seed_key_st
 typedef struct kisa_seed_info_st
 {
 	KISA_ENC_DEC	encrypt;
-	DWORD			ivec[4];
+	DWORd			ivec[4];
 	KISA_SEED_KEY	seed_key;
-	DWORD			cbc_buffer[4];
+	DWORd			cbc_buffer[4];
 	int				buffer_length;
-	DWORD			cbc_last_block[4];
+	DWORd			cbc_last_block[4];
 	int				last_block_flag;
 } KISA_SEED_INFO;
 #endif
@@ -92,7 +92,7 @@ typedef struct kisa_seed_info_st
 @remarks 전반적으로 동일한 기능의 함수가 SEED CTR, CBC, HIGHT CTR, CBC에 있으나 include 시
 동일 함수일 경우 충돌 때문에 뒤에 구분할 수 있도록 운영모드를 붙인다.
 */
-DWORD* chartoint32_for_SEED_CBC( IN BYTE *in, IN int nLen );
+DWORd* chartoint32_for_SEED_CBC( IN BYTE *in, IN int nLen );
 
 /**
 @brief int 배열을 BYTE 배열로 변환한다.
@@ -102,7 +102,7 @@ DWORD* chartoint32_for_SEED_CBC( IN BYTE *in, IN int nLen );
 @remarks 전반적으로 동일한 기능의 함수가 SEED CTR, CBC, HIGHT CTR, CBC에 있으나 include 시
 동일 함수일 경우 충돌 때문에 뒤에 구분할 수 있도록 운영모드를 붙인다.
 */
-BYTE* int32tochar_for_SEED_CBC( IN DWORD *in, IN int nLen );
+BYTE* int32tochar_for_SEED_CBC( IN DWORd *in, IN int nLen );
 
 /**
 @brief SEED CBC 알고리즘 초기화 함수
@@ -125,7 +125,7 @@ int SEED_CBC_init( OUT KISA_SEED_INFO *pInfo, IN KISA_ENC_DEC enc, IN BYTE *pbsz
 @return 0: inLen의 값이 0보다 작은 경우, KISA_SEED_INFO 구조체나 in, out에 널 포인터가 할당되었을 경우
         1: 성공
 */
-int SEED_CBC_Process( OUT KISA_SEED_INFO *pInfo, IN DWORD *in, IN int inLen, OUT DWORD *out, OUT int *outLen );
+int SEED_CBC_Process( OUT KISA_SEED_INFO *pInfo, IN DWORd *in, IN int inLen, OUT DWORd *out, OUT int *outLen );
 
 /**
 @brief SEED CBC 운영모드 종료 및 패딩 처리(PKCS7)
@@ -139,7 +139,7 @@ int SEED_CBC_Process( OUT KISA_SEED_INFO *pInfo, IN DWORD *in, IN int inLen, OUT
 @remarks 패딩 로직때문에 16바이트 블럭으로 처리함으로 복호화 시 출력 버퍼는
 평문보다 16바이트 커야 한다.(평문이 16바이트 블럭 시 패딩 데이타가 16바이트가 들어간다.)
 */
-int SEED_CBC_Close( OUT KISA_SEED_INFO *pInfo, IN DWORD *out, IN int *outLen );
+int SEED_CBC_Close( OUT KISA_SEED_INFO *pInfo, IN DWORd *out, IN int *outLen );
 
 /**
 @brief 처리하고자 하는 데이터가 적을 경우에 사용

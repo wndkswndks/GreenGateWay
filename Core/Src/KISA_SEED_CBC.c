@@ -12,7 +12,7 @@
 
 
 // S-BOX
-const static DWORD SS0[256] =
+const static DWORd SS0[256] =
 {
 	0x2989a1a8, 0x05858184, 0x16c6d2d4, 0x13c3d3d0, 0x14445054, 0x1d0d111c, 0x2c8ca0ac, 0x25052124,
 	0x1d4d515c, 0x03434340, 0x18081018, 0x1e0e121c, 0x11415150, 0x3cccf0fc, 0x0acac2c8, 0x23436360,
@@ -48,7 +48,7 @@ const static DWORD SS0[256] =
 	0x28c8e0e8, 0x1b0b1318, 0x05050104, 0x39497178, 0x10809090, 0x2a4a6268, 0x2a0a2228, 0x1a8a9298
 };
 
-const static DWORD SS1[256] =
+const static DWORd SS1[256] =
 {
 	0x38380830, 0xe828c8e0, 0x2c2d0d21, 0xa42686a2, 0xcc0fcfc3, 0xdc1eced2, 0xb03383b3, 0xb83888b0,
 	0xac2f8fa3, 0x60204060, 0x54154551, 0xc407c7c3, 0x44044440, 0x6c2f4f63, 0x682b4b63, 0x581b4b53,
@@ -84,7 +84,7 @@ const static DWORD SS1[256] =
 	0xd819c9d1, 0x4c0c4c40, 0x80038383, 0x8c0f8f83, 0xcc0ecec2, 0x383b0b33, 0x480a4a42, 0xb43787b3
 };
 
-const static DWORD SS2[256] =
+const static DWORd SS2[256] =
 {
 	0xa1a82989, 0x81840585, 0xd2d416c6, 0xd3d013c3, 0x50541444, 0x111c1d0d, 0xa0ac2c8c, 0x21242505,
 	0x515c1d4d, 0x43400343, 0x10181808, 0x121c1e0e, 0x51501141, 0xf0fc3ccc, 0xc2c80aca, 0x63602343,
@@ -120,7 +120,7 @@ const static DWORD SS2[256] =
 	0xe0e828c8, 0x13181b0b, 0x01040505, 0x71783949, 0x90901080, 0x62682a4a, 0x22282a0a, 0x92981a8a
 };
 
-const static DWORD SS3[256] =
+const static DWORd SS3[256] =
 {
 	0x08303838, 0xc8e0e828, 0x0d212c2d, 0x86a2a426, 0xcfc3cc0f, 0xced2dc1e, 0x83b3b033, 0x88b0b838,
 	0x8fa3ac2f, 0x40606020, 0x45515415, 0xc7c3c407, 0x44404404, 0x4f636c2f, 0x4b63682b, 0x4b53581b,
@@ -188,8 +188,8 @@ const static DWORD SS3[256] =
 #define ROTR(x, n)     (((x) >> (n)) | ((x) << (32-(n))))
 
 #define EndianChange(dwS)								\
-	( (ROTL((dwS),  8) & (DWORD)0x00ff00ff) |			\
-	(ROTL((dwS), 24) & (DWORD)0xff00ff00) )				\
+	( (ROTL((dwS),  8) & (DWORd)0x00ff00ff) |			\
+	(ROTL((dwS), 24) & (DWORd)0xff00ff00) )				\
 
 /************************ Constants for Key schedule **************************/
 #define KC0     0x9e3779b9UL
@@ -242,9 +242,9 @@ const static DWORD SS3[256] =
 
 void KISA_SEED_Encrypt_Block_forCBC( unsigned int *in, unsigned int *out, KISA_SEED_KEY *ks )
 {
-	DWORD L0, L1, R0, R1;		// Iuput/output values at each rounds
-	DWORD T0, T1;				// Temporary variables for round function F
-	DWORD *K = ks->key_data;	// Pointer of round keys
+	DWORd L0, L1, R0, R1;		// Iuput/output values at each rounds
+	DWORd T0, T1;				// Temporary variables for round function F
+	DWORd *K = ks->key_data;	// Pointer of round keys
 
 // Set up input values for first round
 	L0 = (((unsigned char*)in)[3] << 24) | (((unsigned char*)in)[2] << 16) | (((unsigned char*)in)[1] << 8) | (((unsigned char*)in)[0]);
@@ -294,9 +294,9 @@ void KISA_SEED_Encrypt_Block_forCBC( unsigned int *in, unsigned int *out, KISA_S
 
 void KISA_SEED_Decrypt_Block_forCBC( unsigned int *in, unsigned int *out, KISA_SEED_KEY *ks )
 {
-	DWORD L0, L1, R0, R1;		// Iuput/output values at each rounds
-	DWORD T0, T1;				// Temporary variables for round function F
-	DWORD *K = ks->key_data;		// Pointer of round keys
+	DWORd L0, L1, R0, R1;		// Iuput/output values at each rounds
+	DWORd T0, T1;				// Temporary variables for round function F
+	DWORd *K = ks->key_data;		// Pointer of round keys
 
 // Set up input values for first round
 	L0 = (((unsigned char*)in)[3] << 24) | (((unsigned char*)in)[2] << 16) | (((unsigned char*)in)[1] << 8) | (((unsigned char*)in)[0]);
@@ -345,9 +345,9 @@ void KISA_SEED_Decrypt_Block_forCBC( unsigned int *in, unsigned int *out, KISA_S
 
 
 
-static DWORD g_chartoint32_buf[40] = {0,};
+static DWORd g_chartoint32_buf[40] = {0,};
 
-DWORD* chartoint32_for_SEED_CBC( IN BYTE *in, IN int nLen )
+DWORd* chartoint32_for_SEED_CBC( IN BYTE *in, IN int nLen )
 {
     int len, i;
     if(nLen % 4)
@@ -367,7 +367,7 @@ DWORD* chartoint32_for_SEED_CBC( IN BYTE *in, IN int nLen )
 /* int32tochar 전용 전역 버퍼: BYTE 타입, 160byte */
 static BYTE g_int32tochar_buf[160] = {0,};
 
-BYTE* int32tochar_for_SEED_CBC( IN DWORD *in, IN int nLen )
+BYTE* int32tochar_for_SEED_CBC( IN DWORd *in, IN int nLen )
 {
     int i;
 
@@ -389,9 +389,9 @@ BYTE* int32tochar_for_SEED_CBC( IN DWORD *in, IN int nLen )
 
 int SEED_CBC_init( OUT KISA_SEED_INFO *pInfo, IN KISA_ENC_DEC enc, IN BYTE *pbszUserKey, IN BYTE *pbszIV )
 {
-	DWORD A, B, C, D;							// Iuput/output values at each rounds
-	DWORD T0, T1;								// Temporary variable
-	DWORD *K;
+	DWORd A, B, C, D;							// Iuput/output values at each rounds
+	DWORd T0, T1;								// Temporary variable
+	DWORd *K;
 
 	if( NULL == pInfo ||
 		NULL == pbszUserKey ||
@@ -406,10 +406,10 @@ int SEED_CBC_init( OUT KISA_SEED_INFO *pInfo, IN KISA_ENC_DEC enc, IN BYTE *pbsz
 	pInfo->last_block_flag = pInfo->buffer_length = 0;
 
 // Set up input values for Key Schedule
-	A = ((DWORD)pbszUserKey[3] << 24) | ((DWORD)pbszUserKey[2] << 16) | ((DWORD)pbszUserKey[1] << 8) | ((DWORD)pbszUserKey[0]);
-	B = ((DWORD)pbszUserKey[7] << 24) | ((DWORD)pbszUserKey[6] << 16) | ((DWORD)pbszUserKey[5] << 8) | ((DWORD)pbszUserKey[4]);
-	C = ((DWORD)pbszUserKey[11] << 24) | ((DWORD)pbszUserKey[10] << 16) | ((DWORD)pbszUserKey[9] << 8) | ((DWORD)pbszUserKey[8]);
-	D = ((DWORD)pbszUserKey[15] << 24) | ((DWORD)pbszUserKey[14] << 16) | ((DWORD)pbszUserKey[13] << 8) | ((DWORD)pbszUserKey[12]);
+	A = ((DWORd)pbszUserKey[3] << 24) | ((DWORd)pbszUserKey[2] << 16) | ((DWORd)pbszUserKey[1] << 8) | ((DWORd)pbszUserKey[0]);
+	B = ((DWORd)pbszUserKey[7] << 24) | ((DWORd)pbszUserKey[6] << 16) | ((DWORd)pbszUserKey[5] << 8) | ((DWORd)pbszUserKey[4]);
+	C = ((DWORd)pbszUserKey[11] << 24) | ((DWORd)pbszUserKey[10] << 16) | ((DWORd)pbszUserKey[9] << 8) | ((DWORd)pbszUserKey[8]);
+	D = ((DWORd)pbszUserKey[15] << 24) | ((DWORd)pbszUserKey[14] << 16) | ((DWORd)pbszUserKey[13] << 8) | ((DWORd)pbszUserKey[12]);
 
 // Reorder for big endian
 #ifdef LITTLE_ENDIAN
@@ -446,10 +446,10 @@ int SEED_CBC_init( OUT KISA_SEED_INFO *pInfo, IN KISA_ENC_DEC enc, IN BYTE *pbsz
 	return 1;
 }
 
-int SEED_CBC_Process( OUT KISA_SEED_INFO *pInfo, IN DWORD *in, IN int inLen, OUT DWORD *out, OUT int *outLen )
+int SEED_CBC_Process( OUT KISA_SEED_INFO *pInfo, IN DWORd *in, IN int inLen, OUT DWORd *out, OUT int *outLen )
 {
 	int nCurrentCount = BLOCK_SIZE_SEED;
-	DWORD *pdwXOR;
+	DWORd *pdwXOR;
 
 	if( NULL == pInfo ||
 		NULL == in ||
@@ -505,7 +505,7 @@ int SEED_CBC_Process( OUT KISA_SEED_INFO *pInfo, IN DWORD *in, IN int inLen, OUT
 	return 1;
 }
 
-int SEED_CBC_Close( OUT KISA_SEED_INFO *pInfo, IN DWORD *out, IN int *outLen )
+int SEED_CBC_Close( OUT KISA_SEED_INFO *pInfo, IN DWORd *out, IN int *outLen )
 {
 	unsigned int nPaddngLeng;
 	int i;
@@ -551,7 +551,7 @@ int SEED_CBC_Close( OUT KISA_SEED_INFO *pInfo, IN DWORD *out, IN int *outLen )
 int SEED_CBC_Encrypt( IN BYTE *pbszUserKey, IN BYTE *pbszIV,IN BYTE *pbszPlainText, IN int nPlainTextLen,OUT BYTE *pbszCipherText )
 {
     KISA_SEED_INFO info;
-    unsigned int  outbuf[40]           = {0,};  /* 40 DWORD = 160 byte */
+    unsigned int  outbuf[40]           = {0,};  /* 40 DWORd = 160 byte */
     unsigned int  *data;
     unsigned char newpbszPlainText[160] = {0,};
     unsigned char *cdata;
@@ -935,7 +935,7 @@ static const BYTE TV1_CIPHER_EXPECTED[16] = {
  * Index: TV1_ROUND_KEY_EXPECTED[i][0] = Ki+1,0
  *        TV1_ROUND_KEY_EXPECTED[i][1] = Ki+1,1
  */
-static const DWORD TV1_ROUND_KEY_EXPECTED[16][2] = {
+static const DWORd TV1_ROUND_KEY_EXPECTED[16][2] = {
     { 0x7C8F8C7E, 0xC737A22C },  /* Round  1 */
     { 0xFF276CDB, 0xA7CA684A },  /* Round  2 */
     { 0x2F9D01A1, 0x70049E41 },  /* Round  3 */
@@ -985,8 +985,8 @@ static int raw_decrypt_block(const BYTE *key,
                               BYTE       *out_plain)
 {
     KISA_SEED_INFO info;
-    DWORD  outbuf[4] = {0};
-    DWORD *data      = NULL;
+    DWORd  outbuf[4] = {0};
+    DWORd *data      = NULL;
     BYTE  *result    = NULL;
     int    outLen    = 0;
 
@@ -995,7 +995,7 @@ static int raw_decrypt_block(const BYTE *key,
         return 0;
     }
 
-    /* Convert input bytes to DWORD array */
+    /* Convert input bytes to DWORd array */
     data = chartoint32_for_SEED_CBC((BYTE*)cipher_in, 16);
     if (data == NULL) {
         return 0;
@@ -1009,7 +1009,7 @@ static int raw_decrypt_block(const BYTE *key,
         return 0;
     }
 
-    /* Convert DWORD array back to bytes */
+    /* Convert DWORd array back to bytes */
     result = int32tochar_for_SEED_CBC(outbuf, 16);
     if (result == NULL) {
         return 0;
@@ -1059,10 +1059,10 @@ static int verify_round_keys(void)
     }
 
     for (i = 0; i < 16; i++) {
-        DWORD actual_k0 = info.seed_key.key_data[i * 2];
-        DWORD actual_k1 = info.seed_key.key_data[i * 2 + 1];
-        DWORD expect_k0 = TV1_ROUND_KEY_EXPECTED[i][0];
-        DWORD expect_k1 = TV1_ROUND_KEY_EXPECTED[i][1];
+        DWORd actual_k0 = info.seed_key.key_data[i * 2];
+        DWORd actual_k1 = info.seed_key.key_data[i * 2 + 1];
+        DWORd expect_k0 = TV1_ROUND_KEY_EXPECTED[i][0];
+        DWORd expect_k1 = TV1_ROUND_KEY_EXPECTED[i][1];
         int   rpass     = (actual_k0 == expect_k0) && (actual_k1 == expect_k1);
 
         printf("  Round%2d : %08X    %08X    %08X    %08X    [%s]\n",
@@ -1339,8 +1339,8 @@ int Greenlink_Encrypt(const BYTE *plain, int plain_len, BYTE *cipher_out)
 int Greenlink_Decrypt_org(const BYTE *cipher, BYTE *plain_out)
 {
     KISA_SEED_INFO info;
-    DWORD  outbuf[4] = {0x00};
-    DWORD *data      = NULL;
+    DWORd  outbuf[4] = {0x00};
+    DWORd *data      = NULL;
     BYTE  *result    = NULL;
     int    outLen    = 0;
 
@@ -1351,7 +1351,7 @@ int Greenlink_Decrypt_org(const BYTE *cipher, BYTE *plain_out)
                       (BYTE*)SEED_KEY,
                       (BYTE*)SEED_IV) == 0) return 0;
 
-    /* 2. 입력 바이트 → DWORD 변환 */
+    /* 2. 입력 바이트 → DWORd 변환 */
     data = chartoint32_for_SEED_CBC((BYTE*)cipher, 16);
     if (data == NULL) return 0;
 
@@ -1360,7 +1360,7 @@ int Greenlink_Decrypt_org(const BYTE *cipher, BYTE *plain_out)
 
     if (outLen != 16) return 0;
 
-    /* 4. DWORD → 바이트 변환 */
+    /* 4. DWORd → 바이트 변환 */
     result = int32tochar_for_SEED_CBC(outbuf, 16);
     if (result == NULL) return 0;
 
@@ -1371,8 +1371,8 @@ int Greenlink_Decrypt_org(const BYTE *cipher, BYTE *plain_out)
 int Greenlink_Decrypt(const BYTE *inBuff, BYTE *outBuff, int inLen, int outPutLen)
 {
     KISA_SEED_INFO info;
-    DWORD  outbuf[36] = {0x00};  /* 36 x 4 = 144 byte */
-    DWORD *data       = NULL;
+    DWORd  outbuf[36] = {0x00};  /* 36 x 4 = 144 byte */
+    DWORd *data       = NULL;
     BYTE  *result     = NULL;
     int    outLen     = 0;
 
@@ -1385,7 +1385,7 @@ int Greenlink_Decrypt(const BYTE *inBuff, BYTE *outBuff, int inLen, int outPutLe
                       (BYTE*)SEED_KEY,
                       (BYTE*)SEED_IV) == 0) return 0;
 
-    /* 2. 입력 바이트 → DWORD 변환 */
+    /* 2. 입력 바이트 → DWORd 변환 */
     data = chartoint32_for_SEED_CBC((BYTE*)inBuff, inLen);
     if (data == NULL) return 0;
 
@@ -1393,7 +1393,7 @@ int Greenlink_Decrypt(const BYTE *inBuff, BYTE *outBuff, int inLen, int outPutLe
     SEED_CBC_Process(&info, data, inLen, outbuf, &outLen);
     if (outLen != inLen) return 0;
 
-    /* 4. DWORD → 바이트 변환 */
+    /* 4. DWORd → 바이트 변환 */
     result = int32tochar_for_SEED_CBC(outbuf, inLen);
     if (result == NULL) return 0;
 

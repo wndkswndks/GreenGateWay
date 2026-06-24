@@ -18,6 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "fatfs.h"
+#include "spi.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -45,6 +47,8 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+void SD_Test();
+void SD_Init(void);
 
 /* USER CODE END PV */
 
@@ -133,6 +137,8 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USART1_UART_Init();
   MX_USART3_UART_Init();
+  MX_FATFS_Init();
+  MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
 
   /* [�߰�] ���� ���� ���� 1ȸ ���� ���� ���� ������ �ؽ��ڵ� �ǽð� ���� */
@@ -145,6 +151,7 @@ int main(void)
 
   Uart_Init();
   Test_Config();//
+  SD_Init();
 
   /* USER CODE END 2 */
 
@@ -155,6 +162,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	SD_Test();
     Testfunction();
 //    TxTest();//~~~~~~
   }
