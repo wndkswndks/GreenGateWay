@@ -74,6 +74,13 @@ void Error_Handler(void);
 #define SD_CS_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
+typedef enum
+{
+	SD_OK = 0,
+	SD_END_NEXT_FILE = 1,
+	SD_ERR_RETRY = 2,
+	SD_ERR_NEXT_FILE = 3,
+} SD_EVNT_E;
 
 /* USER CODE END Private defines */
 

@@ -44,11 +44,17 @@
 #define   TOTAL_LEN_TFCR16(N)   	 (22+10*N)
 #define   TOTAL_LEN_TCN2_20(N)   	 (155+24*N)
 
-//YYMMDDhhmm
+#define	  FLASH_GET_IDX_FAC(N)			(3*N+1)
+#define	  FLASH_GET_IDX_ITEM(N)			(3*N+2)
+#define	  FLASH_GET_IDX_COUPLE(N)		(3*N+3)
+
+//YYMMDD
 
 #define DAY_YY(T) (((T) / 10000) % 100)
 #define DAY_MM(T) (((T) / 100) % 100)
 #define DAY_DD(T) ((T) % 100)
+
+//hhmmss
 
 #define DAY_hh(T) (((T) / 10000) % 100)
 #define DAY_mm(T) (((T) / 100) % 100)
@@ -119,17 +125,17 @@
 //==========================
 
 
-#define CMD_TDAH	"TDAH"
-#define CMD_TOFH	"TOFH"
-#define CMD_TDDH	"TDDH"
-#define CMD_TFDH	"TFDH"
-#define CMD_TDUH	"TDUH"
-#define CMD_TNOH	"TNOH"
-#define CMD_TTIM	"TTIM"
-#define CMD_TUPG	"TUPG"
-#define CMD_TVER	"TVER"
-#define CMD_TFCR	"TFCR"
-#define CMD_TCN2	"TCN2"
+#define CMD_TDAH	"TDAH"//1
+#define CMD_TOFH	"TOFH"//2
+#define CMD_TDDH	"TDDH"//3
+#define CMD_TFDH	"TFDH"//4
+#define CMD_TDUH	"TDUH"//5
+#define CMD_TNOH	"TNOH"//6
+#define CMD_TTIM	"TTIM"//
+#define CMD_TUPG	"TUPG"//
+#define CMD_TVER	"TVER"//
+#define CMD_TFCR	"TFCR"//
+#define CMD_TCN2	"TCN2"//
 
 #define	CMD_PDUH	"PDUH"
 #define	CMD_PFST	"PFST"
@@ -165,11 +171,16 @@
 #define	MSG_NAK      0x15
 #define	MSG_EOT      0x04
 
-#define MIN_60  60
-#define HOUR_1  100
-#define HOUR_24  2400
-#define YEAR_1  10000
-#define MON_1  100
+
+
+#define DAY_1_5CNT  288 //하루 5분 간격
+#define DAY_1_30CNT  48//하루 30분 간격
+
+#define DAY_1_5_END  287 //하루 5분 마지막 인덱스
+#define DAY_1_30_END  47//하루 30분 마지막 인덱스
+
+
+
 
 /*  			define end  			*/
 
@@ -179,6 +190,15 @@ typedef enum
 {
 	IDX_RX_CMD = 0,
 	IDX_RX_DATA = 1,
+
+	CMD_SET_FAC_CODE = 1,
+	CMD_SET_ITEM_CODE = 2,
+	CMD_SET_MIN_VAL = 3,
+	CMD_SET_MAX_VAL = 4,
+	CMD_SET_STAND_VAL = 5,
+	CMD_READ_ITEM = 6,
+	CMD_SET_COUPLE = 7,
+
 } UART_E;
 
 typedef enum
@@ -627,51 +647,58 @@ typedef enum
     */
 
  //   ========================================================================================
+
+} CMD_E;
+
+
+
+typedef enum
+{
 // RX DEBUG============
-    VIEW_ADD_1 = 1,
-    VIEW_ADD_2 = 2,
-    VIEW_ADD_3 = 3,
-    VIEW_ADD_4 = 4,
-    VIEW_ADD_5 = 5,
-    VIEW_ADD_6 = 6,
-    VIEW_ADD_7 = 7,
-    VIEW_ADD_8 = 8,
-    VIEW_ADD_9 = 9,
-    VIEW_ADD_10 = 10,
-    VIEW_ADD_11 = 11,
+	VIEW_ADD_1 = 1,
+	VIEW_ADD_2 = 2,
+	VIEW_ADD_3 = 3,
+	VIEW_ADD_4 = 4,
+	VIEW_ADD_5 = 5,
+	VIEW_ADD_6 = 6,
+	VIEW_ADD_7 = 7,
+	VIEW_ADD_8 = 8,
+	VIEW_ADD_9 = 9,
+	VIEW_ADD_10 = 10,
+	VIEW_ADD_11 = 11,
 
-    MAX_COMM_1 = 0,
-    MIN_COMM_1 = 0,
+	MAX_COMM_1 = 0,
+	MIN_COMM_1 = 0,
 //ID===================
-    ID_TDAH_1  = 1,
-    ID_TOFH_2  = 2,
-    ID_TDDH_3  = 3,
-    ID_TFDH_4  = 4,
-    ID_TDUH_5  = 5,
-    ID_TNOH_6  = 6,
-    ID_TTIM_9  = 7,
-    ID_TUPG_10 = 8,
-    ID_TVER_11 = 9,
-    ID_TFCR_15 = 10,
-    ID_TFCR_16 = 11,
-    ID_TCN2_20 = 12,
+	ID_TDAH_1  = 1,
+	ID_TOFH_2  = 2,
+	ID_TDDH_3  = 3,
+	ID_TFDH_4  = 4,
+	ID_TDUH_5  = 5,
+	ID_TNOH_6  = 6,
+	ID_TTIM_9  = 7,
+	ID_TUPG_10 = 8,
+	ID_TVER_11 = 9,
+	ID_TFCR_15 = 10,
+	ID_TFCR_16 = 11,
+	ID_TCN2_20 = 12,
 
-    ID_PDUH_5  = 13,
-    ID_PFST_7  = 14,
-    ID_PSEP_8  = 15,
-    ID_PTIM_9  = 16,
-    ID_PUPG_10 = 17,
-    ID_PVER_11 = 18,
-    ID_PSET_12 = 19,
-    ID_PFCC_13 = 20,
-    ID_PAST_14 = 21,
-    ID_PFCR_15 = 22,
-    ID_PFRS_16 = 23,
-    ID_PRSI_17 = 24,
-    ID_PDAT_18 = 25,
-    ID_PODT_19 = 26,
-    ID_PCN2_20  = 27,
-    ID_PRBT_22 = 28,
+	ID_PDUH_5  = 13,
+	ID_PFST_7  = 14,
+	ID_PSEP_8  = 15,
+	ID_PTIM_9  = 16,
+	ID_PUPG_10 = 17,
+	ID_PVER_11 = 18,
+	ID_PSET_12 = 19,
+	ID_PFCC_13 = 20,
+	ID_PAST_14 = 21,
+	ID_PFCR_15 = 22,
+	ID_PFRS_16 = 23,
+	ID_PRSI_17 = 24,
+	ID_PDAT_18 = 25,
+	ID_PODT_19 = 26,
+	ID_PCN2_20	= 27,
+	ID_PRBT_22 = 28,
 
 
 
@@ -679,8 +706,70 @@ typedef enum
 	PROTEC_STOP_GRACE = 8,// 방지시설 중지유예
 	ABNORMAL = 0, // 비정상
 	NORMAL = 1,// 정상
+	N_A = 3,
 
-} CMD_E;
+
+	OPER_NO = 0, //5분 미가동
+	OPER_OK = 1, //5분 가동
+
+
+	VALUE_ZERO = 0,
+
+	STATUS_NORMAL = 0x00,  // 정상
+	STATUS_ABNORMAL = 0x01,  // 비정상
+	STATUS_COMM_ERROR = 0x02,  // 통신 불량
+	STATUS_POWER_LOSS  = 0x04,	// 전원 단절
+	STATUS_UNDER_CHECK = 0x08,	// 점검 중
+
+
+	PUPG_F_HOST 	= 1,   /* SFTP 서버 주소	  예: 192.168.219.113	 */
+	PUPG_F_PORT 	= 2,   /* SFTP 포트 (숫자만)  예: 22				  */
+	PUPG_F_PATH 	= 3,   /* 원격 파일 경로		예: update/testLED2.hex */
+	PUPG_F_USER 	= 4,   /* SFTP ID			  예: sftp_test		 */
+	PUPG_F_PWD		= 5,   /* SFTP 비밀번호 							*/
+	PUPG_F_FTP_TYPE = 6,   /* FTP 타입 (숫자만)   1 = SFTP 			 */
+	PUPG_F_NEW_IP	= 7,   /* 새 통신서버 IP							 */
+	PUPG_F_PRE_TUPG = 8,   /* 사전 제작 TUPG (롤백 실패 시 RPi가 대신 송신) */
+	PUPG_F_START	= 9,   /* 수집 완료 신호, 값은 반드시 "start"	   */
+	PUPG_F_MAX,
+
+	ITEM_CODE_A = 1,
+	ITEM_CODE_D = 2,
+	ITEM_CODE_T = 3,
+	ITEM_CODE_H = 4,
+	ITEM_CODE_a = 5,
+	ITEM_CODE_b = 6,
+
+	FACI_CODE_E = 1,
+	FACI_CODE_P = 2,
+	FACI_CODE_F = 3,
+
+	FAC_CODE_MAX_ADDR = 4,
+
+	FLASH_IDX_INIT = 0,
+
+	FLASH_IDX_FAC_0 = 1,
+	FLASH_IDX_ITEM_0 = 2,
+	FLASH_IDX_COUPLE_0 = 3,
+
+	FLASH_IDX_FAC_1 = 4,
+	FLASH_IDX_ITEM_1 = 5,
+	FLASH_IDX_COUPLE_1 = 6,
+
+	FLASH_IDX_FAC_2 = 7,
+	FLASH_IDX_ITEM_2 = 8,
+	FLASH_IDX_COUPLE_2 = 9,
+
+	FLASH_IDX_FAC_3 = 10,
+	FLASH_IDX_ITEM_3 = 11,
+	FLASH_IDX_COUPLE_3 = 12,
+
+	FLASH_IDX_FAC_4 = 13,
+	FLASH_IDX_ITEM_4 = 14,
+	FLASH_IDX_COUPLE_4 = 15,
+
+
+} GREEN_E;
 /*  			enum end  				*/
 
 
@@ -692,7 +781,7 @@ typedef struct
 	uint8_t passingBuff[160];
 	uint8_t passingCnt;
 	uint8_t rxCnt;
-	uint8_t txCnt;
+	uint16_t txCnt;
 	uint32_t rxTimeStamp;
 	uint32_t txMsgTimeStamp;
 	uint8_t txMsgFlag;
@@ -702,9 +791,7 @@ typedef struct
 	char txAllBuff[40];
 	uint8_t ID;
 	uint8_t txCmd;
-	uint8_t TOFH_2_Ack;
-	uint8_t tofhDone;
-
+	uint8_t txUse;
 	uint8_t stepNoneAck;
 	uint8_t stepNoneMsg;
 	uint8_t stepNoneNck;
@@ -718,9 +805,12 @@ typedef struct
 	uint8_t MM;
 	uint8_t YY;
 
-	uint8_t minChange;
-	uint32_t wakeUpTime;
-	uint32_t lastTxTime;
+	uint8_t secChange1;
+	uint8_t minChange1;
+	uint8_t minChange3;
+	uint8_t minChange4;
+	uint32_t wakeUpDayTime;
+	uint32_t lastTxDayTime;
 
 } TIME_T;
 
@@ -733,14 +823,24 @@ typedef struct
 	uint8_t operStatus[2];//가동상태 [1][4][5][6]
 	uint8_t protectStatus[2];//배출시설 정상여부 [1][4][5][6]
 
+	uint8_t valueBuff[6];//측정값 [1][4][5]
+	uint8_t statusBuff[6];//자료상태 [1][4][5]
+	uint8_t operStatusBuff[6];//가동상태 [1][4][5][6]
+	uint8_t protectStatusBuff[6];//배출시설 정상여부 [1][4][5][6]
+
+
 	uint16_t nomalCnt[2];//정상건수[3]
-	uint16_t FultCnt[2];//비정상건수[3]
+	uint16_t abnomalCnt[2];//비정상건수[3]
 	uint16_t commuErrCnt[2];//통신불량[3]
 	uint16_t fixCnt[2];//점검중건수[3]
 	uint16_t powerOffCnt[2];//전원단절 건수[2][3]
 	float rangeMin;//측정범위 최소값[14]
 	float rangeMax;//측정범위 최대값[14]
 	float rangeStandard;//측정범위 기준값[14]
+	uint8_t couple;
+	uint8_t status5sec[60];//5초 자료상태 [1][4][5]
+	uint8_t value5sec[60];//5초 측정값 [1][4][5]
+
 } PART_T;
 
 typedef struct
@@ -751,9 +851,13 @@ typedef struct
 	uint32_t measureTime;//측정시간[공통] // YYMMDDhhmm
 	uint8_t itemNum;
 	uint8_t itemMode;
-	uint8_t itemAllFlag;
+	uint8_t itemAllFlag1;
+	uint8_t itemAllFlag2;
+	uint8_t itemAllFlag3;
 	PART_T item[5];//항목
-
+	uint8_t status5SecCnt;
+	uint8_t status5MinCnt;
+	uint8_t dataStatus;
 	uint32_t powerOffDay;//전원단절 기준일자 yyyyMMDD[2]
 	uint32_t closeDate;
 	uint16_t dayCnt;
@@ -763,9 +867,9 @@ typedef struct
 	uint16_t noTxTime;//미전송시간[7] hhmm
 	uint32_t passWard;//비밀번호 10자리 [8]
 
-	uint8_t FTPtype;// [10]
+	char FTPtype;// [10]
 	char FTPipDomain[40]; // [10]
-	uint32_t FTPport; // [10]
+	char FTPport[5]; // [10]
 	char road[50]; //경로 // [10]
 	char FTPid[10]; // [10]
 	char FTPpwd[10]; // [10]
@@ -787,10 +891,25 @@ typedef struct
 	uint32_t sevrTime;// 서버시간 6자리 hhmmss [9][12]
     uint32_t startDay;//시작일시[5]
     uint32_t endDay;//끝일시[5]
-    uint8_t tohTotalDay;
-    uint16_t tohfTimeSE[4][2];
-    uint32_t tohfDayBuff[4];
-    uint8_t tohfDayCnt;
+
+    uint32_t cmd5day;
+    uint32_t cmd5next;
+    uint32_t cmd5idx;
+
+    uint8_t cmd2TotalDay;
+    uint16_t cmd2TimeSE[2][4][2];
+    uint32_t cmd2DayBuff[4]; //전원단절 기준일자 yyyyMMDD[2] // 최대 4일간
+    uint8_t cmd2DayCnt;
+	uint8_t cmd2Done;
+
+
+	uint32_t cmd4next;
+	uint32_t cmd4fin;
+    uint16_t cmd4idx;
+	uint32_t cmd4day;
+	uint32_t cmd4TxTime;
+	uint32_t cmd4TxDay;
+	uint8_t cmd4Tx9999Flag;
 } CHIMNEY_T;
 
 
@@ -823,7 +942,30 @@ void Uart_Gulobal();
 void Test_Config();
 void Testfunction();
 uint8_t strtol_n(const uint8_t *str, uint32_t * data, uint16_t idx, int n,  uint32_t min, uint32_t max, uint8_t viewAdd);
+void SD_Write_Record(char* dirName, uint32_t yymmdd, uint16_t hhmm, const uint8_t* data, uint16_t len);
 
+uint8_t SD_Read_Step_TxMsg(const char* dirName, uint32_t YYMMDD);
+void SD_Delete_Record(const char* dirName, uint32_t YYMMDD, uint16_t hhmm);
+void SD_CleanupAll(void);
+
+uint32_t YYMMDD_Add(uint32_t YYMMDD);
+uint32_t YYMMDD_Sub(uint32_t YYMMDD);
+uint32_t Get_YYMMDD();
+uint32_t YYMMDD_Sub(uint32_t YYMMDD);
+uint32_t MM_End_MMDD(uint32_t YYMMDD);
+void RX_Fail_NextStep();
+void TimeOut_Msg();
+void TNOH_6_Start();
+void TDUH_5_Start();
+void TFDH_4_Tx_9999();
+uint32_t Get_YYMMDDhhmm();
+void Five_Min_GetData();
+void Thirty_Min_GetData();
+void Five_Sec_GetData();
+uint8_t SD_GetLast_1_TDAH(uint32_t* YYMMDDhhmm);
+
+uint32_t Get_YYMMDD();
+uint16_t Get_hhmm();
 
 /*  			function end  			*/
 

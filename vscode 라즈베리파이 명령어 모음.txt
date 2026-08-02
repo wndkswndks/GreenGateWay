@@ -1,0 +1,4 @@
+sudo shutdown -h now
+iwgetid
+python3 flasher.py
+python3 sftp_download.py
