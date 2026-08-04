@@ -659,7 +659,7 @@ static uint8_t SD_Mkdir_Chk(const char* path)
 void SD_Init(void)
 {
   if(SD_Error_Chk(f_mount(&fs, "", 0), "f_mount"))return;
-  if(SD_CheckFreeSpace())return;
+//  if(SD_CheckFreeSpace())return;
 
     /* 6개 명령어 디렉터리, 부팅 시 한 번만 생성 (이미 있으면 FR_EXIST, 무시) */
 

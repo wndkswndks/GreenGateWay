@@ -44,9 +44,17 @@
 #define   TOTAL_LEN_TFCR16(N)   	 (22+10*N)
 #define   TOTAL_LEN_TCN2_20(N)   	 (155+24*N)
 
-#define	  FLASH_GET_IDX_FAC(N)			(3*N+1)
-#define	  FLASH_GET_IDX_ITEM(N)			(3*N+2)
-#define	  FLASH_GET_IDX_COUPLE(N)		(3*N+3)
+#define	  FLASH_GET_IDX_FAC(N)			(6*N+1)
+#define	  FLASH_GET_IDX_ITEM(N)			(6*N+2)
+#define	  FLASH_GET_IDX_COUPLE(N)		(6*N+3)
+#define	  FLASH_GET_IDX_MIN(N)			(6*N+4)
+#define	  FLASH_GET_IDX_MAX(N)			(6*N+5)
+#define	  FLASH_GET_IDX_STAND(N)		(6*N+6)
+
+
+
+#define	  GET_FAC_C(N)			(N/10000)
+#define	  GET_FAC_NUM(N)		(N%10000)
 
 //YYMMDD
 
@@ -744,29 +752,47 @@ typedef enum
 	FACI_CODE_P = 2,
 	FACI_CODE_F = 3,
 
-	FAC_CODE_MAX_ADDR = 4,
+	ITEM_MAX_ADDR = 4,
+	ITEM_MAX_NUM = 5,
 
 	FLASH_IDX_INIT = 0,
 
 	FLASH_IDX_FAC_0 = 1,
 	FLASH_IDX_ITEM_0 = 2,
 	FLASH_IDX_COUPLE_0 = 3,
+	FLASH_IDX_MIN_0 = 4,
+	FLASH_IDX_MAX_0 = 5,
+	FLASH_IDX_STAND_0 = 6,
 
-	FLASH_IDX_FAC_1 = 4,
-	FLASH_IDX_ITEM_1 = 5,
-	FLASH_IDX_COUPLE_1 = 6,
+	FLASH_IDX_FAC_1 = 7,
+	FLASH_IDX_ITEM_1 = 8,
+	FLASH_IDX_COUPLE_1 = 9,
+	FLASH_IDX_MIN_1 = 10,
+	FLASH_IDX_MAX_1 = 11,
+	FLASH_IDX_STAND_1 = 12,
 
-	FLASH_IDX_FAC_2 = 7,
-	FLASH_IDX_ITEM_2 = 8,
-	FLASH_IDX_COUPLE_2 = 9,
+	FLASH_IDX_FAC_2 = 13,
+	FLASH_IDX_ITEM_2 = 14,
+	FLASH_IDX_COUPLE_2 = 15,
+	FLASH_IDX_MIN_2 = 16,
+	FLASH_IDX_MAX_2 = 17,
+	FLASH_IDX_STAND_2 = 18,
 
-	FLASH_IDX_FAC_3 = 10,
-	FLASH_IDX_ITEM_3 = 11,
-	FLASH_IDX_COUPLE_3 = 12,
+	FLASH_IDX_FAC_3 = 19,
+	FLASH_IDX_ITEM_3 = 20,
+	FLASH_IDX_COUPLE_3 = 21,
+	FLASH_IDX_MIN_3 = 22,
+	FLASH_IDX_MAX_3 = 23,
+	FLASH_IDX_STAND_3 = 24,
 
-	FLASH_IDX_FAC_4 = 13,
-	FLASH_IDX_ITEM_4 = 14,
-	FLASH_IDX_COUPLE_4 = 15,
+	FLASH_IDX_FAC_4 = 25,
+	FLASH_IDX_ITEM_4 = 26,
+	FLASH_IDX_COUPLE_4 = 27,
+	FLASH_IDX_MIN_4 = 28,
+	FLASH_IDX_MAX_4 = 29,
+	FLASH_IDX_STAND_4 = 30,
+
+	FLASH_IDX_MAX_OVER,
 
 
 } GREEN_E;
@@ -828,6 +854,10 @@ typedef struct
 	uint8_t operStatusBuff[6];//가동상태 [1][4][5][6]
 	uint8_t protectStatusBuff[6];//배출시설 정상여부 [1][4][5][6]
 
+	uint16_t disposDelTimeCnt;//배출시설 가동유예시간(분) 카운터 9
+	uint16_t protectDelTimeCnt;//방지시설 정지유예시간(분) 카운터 8
+	uint8_t disposDelFlag;
+	uint8_t protectDelFlag;
 
 	uint16_t nomalCnt[2];//정상건수[3]
 	uint16_t abnomalCnt[2];//비정상건수[3]
@@ -883,8 +913,6 @@ typedef struct
 	uint8_t protectRelyCnt;//방지시설 정상여부 관계정보수 [15][16]
 	uint16_t disposDelTime;//배출시설 가동유예시간(분)[19]
 	uint16_t protectDelTime;//방지시설 정지유예시간(분)[19]
-    uint16_t disposBuff[10];
-    uint16_t protectBuff[10];
 
 	uint8_t transferMode;//[21][공통][18]
 	uint32_t sevrDay; // 서버 날짜 6자리 YYMMDD

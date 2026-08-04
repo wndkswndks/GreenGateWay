@@ -184,6 +184,7 @@ uint8_t flashSave = 0;
 
 void Flash_Write_Word(uint16_t add, uint32_t data)
 {
+	if(add >=FLASH_IDX_MAX_OVER) return;
 	flashBuff[add] = data;
 	flashSave = 1;
 }
@@ -235,19 +236,21 @@ void Flash_Read_All_Word()
 
 void Flash_init()
 {
-#if 1
-//	for(int i =0 ;i < FLASH_SIZE_WORDS;i++)
-//	{
-//		flashBuff[i] = 0;
-//	}
+#if 0
+	for(int i =0 ;i < FLASH_SIZE_WORDS;i++)
+	{
+		flashBuff[i] = 0;
+	}
 	Flash_Write_All_Word();
 #endif
-	HAL_Delay(1000);
 	Flash_Read_All_Word();
+
+
 //	for(int i =0 ;i < FLASH_SIZE_WORDS;i++)
 //	{
 //		printf("%u \r\n",flashBuff[i]);
 //	}
+
 }
 
 void Debug_printf(const char *format, ...) {
@@ -1193,6 +1196,46 @@ void TFDH_4_Tx_9999()
 
 }
 
+uint8_t Fac_Code_Find(uint32_t facCode)
+{
+	for(int i =0 ;i < m_ch[0].itemNum;i++)
+	{
+		if(facCode == m_ch[0].item[i].facCode)
+		{
+			return i;
+		}
+	}
+
+	return 0xff;
+}
+
+uint8_t Fac_Code_Get_Frind(uint8_t coupleAdd, uint32_t* facCodeE, uint32_t* facCodePf)
+{
+	uint8_t coupleA, coupleNum;
+	uint8_t facCodeC;
+	for(int i =0 ;i < 5;i++)
+	{
+		facCodeC = GET_FAC_C(m_ch[0].item[i].facCode);
+
+		if(facCodeC == FACI_CODE_E)
+		{
+			coupleA = m_ch[0].item[i].couple/10;
+			coupleNum = m_ch[0].item[i].couple%10;
+			if(coupleA == coupleAdd)
+			{
+				*facCodeE = m_ch[0].item[i].facCode;
+				*facCodePf = m_ch[0].item[coupleNum].facCode;
+				return 1;
+			}
+
+		}
+	}
+	return 0;
+}
+
+
+
+
 // ========================================================================================
 // [1] 측정자료 전송 (TDAH) - 가변 구조
 // ========================================================================================
@@ -1577,12 +1620,15 @@ void Tx_15_TFCR(uint8_t ch)
 
 	// 바디 (가변)
 	int commIdx;
+	uint32_t facCodeE = 0, facCodePf = 0;
 	for(int i = 0; i < m_ch[ch].protectRelyCnt; i++)
 	{
 		commIdx = i * IDX_TFCR15_CYCLE;
-
-		TxStr_Int_Input("disposBuff",   commIdx + IDX_TFCR15_6n, LEN_TFCR15_6n_5, m_ch[ch].disposBuff[i]);
-		TxStr_Int_Input("protectBuff",  commIdx + IDX_TFCR15_7n, LEN_TFCR15_7n_5, m_ch[ch].protectBuff[i]);
+		if(Fac_Code_Get_Frind(i,&facCodeE, &facCodePf))
+		{
+			TxStr_Int_Input("disposBuff",   commIdx + IDX_TFCR15_6n, LEN_TFCR15_6n_5, facCodeE);
+			TxStr_Int_Input("protectBuff",  commIdx + IDX_TFCR15_7n, LEN_TFCR15_7n_5, facCodePf);
+		}
 	}
 
 	// 테일러 (CRC)
@@ -2094,6 +2140,55 @@ void Tx_To_RasPi(uint8_t num, char*str)
 	HAL_Delay(50);
 }
 
+void DisposProtec_Config()
+{
+	for(int i =0 ;i < 5;i++)
+	{
+		if(m_ch[0].item[i].disposDelFlag ==0 && m_ch[0].item[i].protectDelFlag==0)//step0
+		{
+			if(m_ch[0].item[i].protectStatus[FIV_IDX] == NORMAL)
+			{
+				m_ch[0].item[i].disposDelFlag = 1;
+				m_ch[0].item[i].disposDelTimeCnt = m_ch[0].disposDelTime;
+				m_ch[0].item[i].protectStatus[FIV_IDX] = OPER_START_GRACE;
+			}
+		}
+		else if(m_ch[0].item[i].disposDelFlag ==1&& m_ch[0].item[i].protectDelFlag==0)//step1
+		{
+			m_ch[0].item[i].protectStatus[FIV_IDX] = OPER_START_GRACE;
+		}
+		else if(m_ch[0].item[i].disposDelFlag ==2&& m_ch[0].item[i].protectDelFlag==0)//step1
+		{
+			m_ch[0].item[i].protectStatus[FIV_IDX] = PROTEC_STOP_GRACE;
+			m_ch[0].item[i].protectDelFlag = 1;
+			m_ch[0].item[i].protectDelTimeCnt = m_ch[0].protectDelTime;
+		}
+		else if(m_ch[0].item[i].disposDelFlag ==2&& m_ch[0].item[i].protectDelFlag==1)//step1
+		{
+			m_ch[0].item[i].protectStatus[FIV_IDX] = PROTEC_STOP_GRACE;
+		}
+		else if(m_ch[0].item[i].disposDelFlag == 2 && m_ch[0].item[i].protectDelFlag== 2)//step2
+		{
+			m_ch[0].item[i].protectStatus[FIV_IDX] = ABNORMAL;
+		}
+		else
+		{
+			m_ch[0].item[i].protectStatus[FIV_IDX] = NORMAL;
+		}
+	}
+
+}
+
+void Protect_To_Nomal(uint8_t num)
+{
+	if(m_ch[0].item[num].protectStatus[FIV_IDX] == ABNORMAL)
+	{
+		m_ch[0].item[num].disposDelFlag =0;
+		m_ch[0].item[num].protectDelFlag =0;
+	}
+	m_ch[0].item[num].protectStatus[FIV_IDX] = NORMAL;
+
+}
 void Five_Sec_GetData()
 {
 	static uint32_t timeStamp;
@@ -2149,6 +2244,27 @@ void Five_Min_GetData()
 	uint16_t sum =0;
 	uint8_t sumCnt = 0;
 	uint8_t min5Cnt = m_ch[0].status5MinCnt;
+
+	for(int i =0 ;i < 5;i++)
+	{
+		if(m_ch[0].item[i].disposDelTimeCnt && m_ch[0].item[i].disposDelFlag == 1)//가동유예
+		{
+			m_ch[0].item[i].disposDelTimeCnt--;
+			if(m_ch[0].item[i].disposDelTimeCnt==0)
+			{
+				m_ch[0].item[i].disposDelFlag = 2;
+			}
+		}
+		if(m_ch[0].item[i].protectDelTimeCnt && m_ch[0].item[i].protectDelFlag == 1)//방지유예
+		{
+			m_ch[0].item[i].protectDelTimeCnt--;
+			if(m_ch[0].item[i].protectDelTimeCnt==0)
+			{
+				m_ch[0].item[i].protectDelFlag = 2;
+			}
+		}
+	}
+
 	for(int i =0 ;i < 5;i++) //자료상태
 	{
 		nomalCnt = 0; abnomalCnt = 0; commErrCnt = 0; underChkCnt = 0;
@@ -2229,26 +2345,27 @@ void Five_Min_GetData()
 	}
 
 	uint8_t couple;
+	static uint8_t step = STEP0;
 	for(int i =0 ;i < 5;i++)// 배출시설 정상여부
 	{
-		if(m_ch[0].item[i].facCode/10000 == FACI_CODE_E)
+		if(GET_FAC_C(m_ch[0].item[i].facCode) == FACI_CODE_E)
 		{
 			if (m_ch[0].item[i].itemCode == ITEM_CODE_A)
 			{
 				if (m_ch[0].item[i].status[FIV_IDX] == STATUS_NORMAL)
 				{
-					couple = m_ch[0].item[i].couple;
+					couple = m_ch[0].item[i].couple%10;
 					if(m_ch[0].item[couple].status[FIV_IDX] == STATUS_NORMAL)
 					{
-						if(m_ch[0].item[i].operStatus[FIV_IDX] == OPER_OK && m_ch[0].item[couple].operStatus[FIV_IDX] == OPER_OK)
+						if(m_ch[0].item[i].operStatus[FIV_IDX] == OPER_OK && m_ch[0].item[couple].operStatus[FIV_IDX] == OPER_NO)
 						{
-							m_ch[0].item[i].protectStatus[FIV_IDX] = ABNORMAL;
+							DisposProtec_Config();
 						}
-						else m_ch[0].item[i].protectStatus[FIV_IDX] = NORMAL;
+						else Protect_To_Nomal(i);
 					}
-					else m_ch[0].item[i].protectStatus[FIV_IDX] = NORMAL;
+					else Protect_To_Nomal(i);
 				}
-				else m_ch[0].item[i].protectStatus[FIV_IDX] = NORMAL;
+				else Protect_To_Nomal(i);
 			}
 			else m_ch[0].item[i].protectStatus[FIV_IDX] = N_A;
 		}
@@ -2686,21 +2803,17 @@ void Rx_Passing_13_PFCC()
         if(Check_crc16(m_Gcmd.passingBuff, IDX_PFCC13_CRC))return;
         Debug_printf("> OK\r\n");
 
-        for(int i =0 ;i < 10;i++)
-        {
-            if(m_ch[ch].disposBuff[i] == chkBuff[0])
-            {
-                 m_ch[ch].disposBuff[i] = chkBuff[1];
-                 Debug_printf("disposBuff %u \r\n",chkBuff[1]);
-                 break;
-            }
-            else if(m_ch[ch].protectBuff[i] == chkBuff[0])
-            {
-                 m_ch[ch].protectBuff[i] = chkBuff[1];
-                 Debug_printf("protectBuff %u \r\n",chkBuff[1]);
-                 break;
-            }
-        }
+        uint8_t facIdx, flashIdx;
+		facIdx = Fac_Code_Find(chkBuff[0]);
+		if(facIdx != 0xff)
+		{
+			m_ch[ch].item[facIdx].facCode = chkBuff[1];
+			Debug_printf("old code %u \r\n",chkBuff[0]);
+			Debug_printf("new code %u \r\n",chkBuff[1]);
+			flashIdx = FLASH_GET_IDX_FAC(facIdx);
+			Flash_Write_Word(flashIdx, chkBuff[1]);
+		}
+
         TX_ACK(ID_PFCC_13);
 
     }
@@ -2755,16 +2868,27 @@ void Rx_Passing_14_PAST()
 
         for(int i = 0; i < itemCount; i++)
         {
-                m_ch[ch].item[i].facCode = chkBuff[i][0];
-                Debug_printf("facCode %u \r\n",chkBuff[i][0]);
-                m_ch[ch].item[i].itemCode = chkBuff[i][1];
-                Debug_printf("itemCode %u \r\n",chkBuff[i][1]);
-                m_ch[ch].item[i].rangeMin = chkBuff_F[i][0];
-                Debug_printf("measureMin %f \r\n",chkBuff_F[i][0]);
-                m_ch[ch].item[i].rangeMax = chkBuff_F[i][1];
-                Debug_printf("measureMax %f \r\n",chkBuff_F[i][1]);
-                m_ch[ch].item[i].rangeStandard = chkBuff_F[i][2];
-                Debug_printf("measureStandard %f \r\n",chkBuff_F[i][2]);
+
+        		uint8_t facIdx, flashIdx;
+				facIdx = Fac_Code_Find(chkBuff[i][0]);
+				if(facIdx != 0xff)
+				{
+					Debug_printf("facCode %u \r\n",chkBuff[i][0]);
+					m_ch[ch].item[facIdx].itemCode = chkBuff[i][1];
+
+					flashIdx = FLASH_GET_IDX_ITEM(facIdx);
+					Flash_Write_Word(flashIdx, chkBuff[i][1]);
+
+					Debug_printf("itemCode %u \r\n",chkBuff[i][1]);
+					m_ch[ch].item[facIdx].rangeMin = chkBuff_F[i][0];
+					Debug_printf("measureMin %f \r\n",chkBuff_F[i][0]);
+					m_ch[ch].item[facIdx].rangeMax = chkBuff_F[i][1];
+					Debug_printf("measureMax %f \r\n",chkBuff_F[i][1]);
+					m_ch[ch].item[facIdx].rangeStandard = chkBuff_F[i][2];
+					Debug_printf("measureStandard %f \r\n",chkBuff_F[i][2]);
+
+				}
+
         }
         TX_ACK(ID_PAST_14);
     }
@@ -2825,12 +2949,35 @@ void Rx_Passing_16_PFRS()
         if(Check_crc16(m_Gcmd.passingBuff, variableIdx))return;
         Debug_printf("> OK\r\n");
 
+		uint8_t facC, facIdx, flashIdx;
+		uint32_t facNum;
+
+		uint8_t facCcp, facIdxCp;
+		uint32_t facNumCp;
+		m_ch[ch].protectRelyCnt = relationCount;
+		Debug_printf("protectRelyCnt %u \r\n",relationCount);
         for(int i = 0; i < relationCount; i++)
         {
-            m_ch[ch].disposBuff[i] = chkBuff[i][0];
-            Debug_printf("disposBuff %u \r\n",chkBuff[i][0]);
-            m_ch[ch].protectBuff[i] = chkBuff[i][1];
-            Debug_printf("protectBuff %u \r\n",chkBuff[i][1]);
+			facC = GET_FAC_C(chkBuff[i][0]);
+			if(facC == FACI_CODE_E)
+			{
+				facIdx = Fac_Code_Find(chkBuff[i][0]);
+				facIdxCp = Fac_Code_Find(chkBuff[i][1]);
+				if((facIdx != 0xff) && (facIdxCp != 0xff))
+				{
+					m_ch[ch].item[facIdx].couple = facIdxCp* i; //i는 관계넘버
+
+					flashIdx = FLASH_GET_IDX_COUPLE(facIdx);
+					Flash_Write_Word(flashIdx, m_ch[ch].item[facIdx].couple);
+
+					Debug_printf("dispos %hhu \r\n",facIdx);
+					Debug_printf("protect %hhu \r\n",facIdxCp);
+
+				}
+				else Debug_printf("No find E or P,F \r\n");
+			}
+			else Debug_printf("dispos Not E\r\n");
+
         }
         TX_ACK(ID_PFRS_16);
     }
@@ -2925,9 +3072,9 @@ void Rx_Passing_19_PODT()
         if(Check_crc16(m_Gcmd.passingBuff, IDX_PODT19_CRC))return;
         Debug_printf("> OK\r\n");
 
-        m_ch[ch].disposDelTime = chkBuff[0];
+        m_ch[ch].disposDelTime = chkBuff[0]/5;
         Debug_printf("disposDelTime %u \r\n",chkBuff[0]);
-        m_ch[ch].protectDelTime = chkBuff[1];
+        m_ch[ch].protectDelTime = chkBuff[1]/5;
         Debug_printf("protectDelTime %u \r\n",chkBuff[1]);
         TX_ACK(ID_PODT_19);
 
@@ -3130,6 +3277,13 @@ void Tx_Gateway_Config(uint8_t ch)
 
 void Gateway_Init()
 {
+	Flash_init();
+	for(int i =0 ;i < 5;i++)
+	{
+		m_ch[0].item[i].facCode = flashBuff[FLASH_GET_IDX_FAC(i)];
+		m_ch[0].item[i].itemCode = flashBuff[FLASH_GET_IDX_ITEM(i)];
+		m_ch[0].item[i].couple = flashBuff[FLASH_GET_IDX_COUPLE(i)];
+	}
 //	m_time.lastTxDayTime = 2607301900;//임시 2606071101
 	m_time.wakeUpDayTime = 2608100200;//임시
 	m_time.YY = 0;
@@ -3141,11 +3295,13 @@ void Gateway_Init()
 	m_ch[0].itemNum = 5;
 
 	workPlaceCode = 12345;
+	m_ch[0].disposDelTime = 6;
+	m_ch[0].protectDelTime = 6;
 
 	m_ch[0].transferMode = TXMODE_ALL_NUM;
-	SD_GetLast_1_TDAH(&m_time.lastTxDayTime);
+//	SD_GetLast_1_TDAH(&m_time.lastTxDayTime);
 
-	TOFH_2_Start(0,m_time.lastTxDayTime, m_time.wakeUpDayTime);
+//	TOFH_2_Start(0,m_time.lastTxDayTime, m_time.wakeUpDayTime);
 	Flash_init();
 
 }
@@ -3156,8 +3312,8 @@ void Gateway_Config()
 
 
 	Five_Sec_GetData();
-	TDDH_3_Start(0);
-	TFDH_4_Start(0);
+//	TDDH_3_Start(0);
+//	TFDH_4_Start(0);
 
 	ACK_ReSend();
 	TxMsg_ReSend();
@@ -3403,7 +3559,7 @@ void Uart2_Passing_Pop(int cmd, int data)
 			 facC = facCode/10000;
 			 facN = facCode%10000;
 
-			if(facCodeAddr>FAC_CODE_MAX_ADDR) Debug_printf("Addr over size");
+			if(facCodeAddr>ITEM_MAX_ADDR) Debug_printf("Addr over size");
 			else if(facCode>FACI_CODE_F) Debug_printf("facCode over size");
 			else
 			{
@@ -3418,12 +3574,12 @@ void Uart2_Passing_Pop(int cmd, int data)
 		case CMD_SET_ITEM_CODE:
 			facCodeAddr = data/10;
 			 itemC = data%10;
-			if(facCodeAddr>FAC_CODE_MAX_ADDR) Debug_printf("Addr over size");
+			if(facCodeAddr>ITEM_MAX_ADDR) Debug_printf("Addr over size");
 			else if(itemC>ITEM_CODE_b) Debug_printf("itemCode over size");
 			else
 			{
 				m_ch[0].item[facCodeAddr].itemCode = itemC;
-				flashIdx = FLASH_GET_IDX_ITEM(itemC);
+				flashIdx = FLASH_GET_IDX_ITEM(facCodeAddr);
 				Flash_Write_Word(flashIdx, itemC);
 				Debug_printf("itemCode : [%hhu] %c ",facCodeAddr, itemCodeBuff[itemC]);
 			}
@@ -3431,33 +3587,36 @@ void Uart2_Passing_Pop(int cmd, int data)
 		break;
 
 		case CMD_SET_COUPLE:
-			facCodeAddr = data/10;
-			couple = data%10;
-			if(facCodeAddr<5)
+			facCodeAddr = data/100;
+			couple = data%100;
+			if(facCodeAddr <= ITEM_MAX_ADDR)
 			{
 				facCode = m_ch[0].item[facCodeAddr].facCode;
-				facC = facCode/10000;
+				facC = GET_FAC_C(facCode);
 			}
 
-			if(facCodeAddr>FAC_CODE_MAX_ADDR) Debug_printf("Addr over size");
+			if(facCodeAddr>ITEM_MAX_ADDR) Debug_printf("Addr over size");
 			else if(facC !=FACI_CODE_E) Debug_printf("Must Ecode!!");
-			else if(couple>FAC_CODE_MAX_ADDR) Debug_printf("Couple over size");
+			else if((couple%10)>ITEM_MAX_ADDR) Debug_printf("Couple over size");
 			else
 			{
 				m_ch[0].item[facCodeAddr].couple = couple;
-				flashIdx = FLASH_GET_IDX_COUPLE(couple);
+				flashIdx = FLASH_GET_IDX_COUPLE(facCodeAddr);
 				Flash_Write_Word(flashIdx, couple);
-				Debug_printf("%hhu couple is  %hhu",facCodeAddr, couple);
+				Debug_printf("%hhu couple is  Num %hhu : %hhu",facCodeAddr, couple/10, couple%10);
 			}
 		break;
 
 		case CMD_SET_MIN_VAL:
 			facCodeAddr = data/100000;
 			 minVal = (data%100000)/100.0;
-			if(facCodeAddr>FAC_CODE_MAX_ADDR) Debug_printf("Addr over size");
+			if(facCodeAddr>ITEM_MAX_ADDR) Debug_printf("Addr over size");
 			else
 			{
 				m_ch[0].item[facCodeAddr].rangeMin = minVal;
+
+				flashIdx = FLASH_GET_IDX_MIN(facCodeAddr);
+				Flash_Write_Word(flashIdx, minVal);
 				Debug_printf("minVal : [%hhu] %.2f ",facCodeAddr, minVal);
 			}
 		break;
@@ -3465,10 +3624,12 @@ void Uart2_Passing_Pop(int cmd, int data)
 		case CMD_SET_MAX_VAL:
 			facCodeAddr = data/100000;
 			 maxVal = (data%100000)/100.0;
-			if(facCodeAddr>FAC_CODE_MAX_ADDR) Debug_printf("Addr over size");
+			if(facCodeAddr>ITEM_MAX_ADDR) Debug_printf("Addr over size");
 			else
 			{
 				m_ch[0].item[facCodeAddr].rangeMax = maxVal;
+				flashIdx = FLASH_GET_IDX_MAX(facCodeAddr);
+				Flash_Write_Word(flashIdx, maxVal);
 				Debug_printf("maxVal : [%hhu] %.2f ",facCodeAddr, maxVal);
 			}
 		break;
@@ -3476,20 +3637,22 @@ void Uart2_Passing_Pop(int cmd, int data)
 		case CMD_SET_STAND_VAL:
 			facCodeAddr = data/100000;
 			 standardVal = (data%100000)/100.0;
-			if(facCodeAddr>FAC_CODE_MAX_ADDR) Debug_printf("Addr over size");
+			if(facCodeAddr>ITEM_MAX_ADDR) Debug_printf("Addr over size");
 			else
 			{
 				m_ch[0].item[facCodeAddr].rangeStandard = standardVal;
+				flashIdx = FLASH_GET_IDX_STAND(facCodeAddr);
+				Flash_Write_Word(flashIdx, standardVal);
 				Debug_printf("standardVal : [%hhu] %.2f ",facCodeAddr, standardVal);
 			}
 		break;
 
 		case CMD_READ_ITEM:
-			for(int i =0 ;i < 5;i++)
+			for(int i =0 ;i < ITEM_MAX_NUM;i++)
 			{
 				 facCode = m_ch[0].item[i].facCode;
-				 facC = facCode/10000;
-				 facN = facCode%10000;
+				 facC = GET_FAC_C(facCode);
+				 facN = GET_FAC_NUM(facCode);
 				 itemC = m_ch[0].item[i].itemCode;
 				 minVal = m_ch[0].item[i].rangeMin;
 				 maxVal = m_ch[0].item[i].rangeMax;
@@ -3498,10 +3661,10 @@ void Uart2_Passing_Pop(int cmd, int data)
 
 				if (facC == FACI_CODE_E)
 				{
-					couple = m_ch[0].item[i].couple;
+					couple = m_ch[0].item[i].couple%10;
 					facCode = m_ch[0].item[couple].facCode;
-					facCcp = facCode/10000;
-					facNcp = facCode%10000;
+					facCcp = GET_FAC_C(facCode);
+					facNcp = GET_FAC_NUM(facCode);
 					Debug_printf("[%d] :%c%u, %c, min:%.2f, max:%.2f, std:%.2f couple : [%hhu] :%c%u \r\n",
 					i, facCodeBuff[facC], facN, itemCodeBuff[itemC], minVal, maxVal, standardVal,
 					couple, facCodeBuff[facCcp], facNcp);
