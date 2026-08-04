@@ -63,15 +63,15 @@ void SystemClock_Config(void);
 /* �׸���ũ �԰ݼ� �䱸����: �������� �ؽ��ڵ� ������ ���� ���� */
 BYTE g_firmware_sha256[SHA256_DIGEST_VALUELEN];
 
-/* IAR ��Ŀ���� ���� ���� ������ ���� ��ġ�� �˷��޶��?�����ϴ� ��ũ�� */
+/* IAR ��Ŀ���� ���� ���� ������ ���� ��ġ�� �˷��޶��?�����ϴ� ��ũ�� */
 #pragma section=".text"     // �ڵ� ����
-#pragma section=".rodata"   // �б� ���� ���?����
+#pragma section=".rodata"   // �б� ���� ���?����
 
 static SHA256_INFO s_sha_info;
 
 void Calculate_Firmware_Hash(void)
 {
-    // ������ SHA256_INFO sha_info; ������ �����?���� ������ ����մϴ�?
+    // ������ SHA256_INFO sha_info; ������ �����?���� ������ ����մϴ�?
 
     uint8_t *text_start   = (uint8_t *)__section_begin(".text");
     uint8_t *text_end     = (uint8_t *)__section_end(".text");
@@ -145,13 +145,13 @@ int main(void)
   Calculate_Firmware_Hash();
   /* ���� g_firmware_sha256 ���� ���� �迭�� ���� �ؽ� 32����Ʈ�� �����Ǿ����ϴ�. */
   /* �� ���� ���α׷� �ڵ带 �� 1���ڶ� �����ϰ� �ٽ� �����ϸ� �˾Ƽ� ���մϴ�. */
-//  SEED_TestVector1_Verify();
+  SEED_TestVector1_Verify();
   Greenlink_EncDec_Test();
 
   Uart_Init();
   Test_Config();//
   SD_Init();
-  Gateway_Init();
+//  Gateway_Init();
 
   /* USER CODE END 2 */
 
