@@ -880,7 +880,7 @@ void SD_Read_Range(const char* dirName, uint32_t yymmdd,  uint16_t startHHMM, ui
 
 
 uint32_t g_NextReadPos = 0;
-uint8_t readSDbuff[1200] = {0,};
+uint8_t readSDbuff[300] = {0,};
 extern UART_HandleTypeDef huart1;
 uint8_t SD_Read_Step_TxMsg(const char* dirName, uint32_t YYMMDD)
 {
