@@ -157,18 +157,30 @@ void SHA256_Process( OUT SHA256_INFO *Info, IN const BYTE *pszMessage, IN UINT u
 
 	Info->uHighLength += (uDataLen >> 29);
 
+//	while ((uDataLen + remain_buffer) >= SHA256_DIGEST_BLOCKLEN)//메모리 침범오류 원래 있었음
+//	{
+//		memcpy((UCHAR_PTR)(Info->szBuffer + remain_buffer), pszMessage, (SINT)SHA256_DIGEST_BLOCKLEN);
+//		SHA256_Transform((ULONG_PTR)Info->szBuffer, Info->uChainVar);
+//		pszMessage += (SHA256_DIGEST_BLOCKLEN - remain_buffer);
+//		uDataLen -= (SHA256_DIGEST_BLOCKLEN - remain_buffer);
+//		remain_buffer = 0;
+//	}
+
 	while ((uDataLen + remain_buffer) >= SHA256_DIGEST_BLOCKLEN)
 	{
-		memcpy((UCHAR_PTR)(Info->szBuffer + remain_buffer), pszMessage, (SINT)SHA256_DIGEST_BLOCKLEN);
-		SHA256_Transform((ULONG_PTR)Info->szBuffer, Info->uChainVar);
-		pszMessage += (SHA256_DIGEST_BLOCKLEN - remain_buffer);
-		uDataLen -= (SHA256_DIGEST_BLOCKLEN - remain_buffer);
-		remain_buffer = 0;
+	    // 남은 버퍼 공간(64 - remain_buffer)만큼만 복사하도록 수정
+	    memcpy((UCHAR_PTR)(Info->szBuffer + remain_buffer), pszMessage, (SINT)(SHA256_DIGEST_BLOCKLEN - remain_buffer));
+	    SHA256_Transform((ULONG_PTR)Info->szBuffer, Info->uChainVar);
+	    pszMessage += (SHA256_DIGEST_BLOCKLEN - remain_buffer);
+	    uDataLen -= (SHA256_DIGEST_BLOCKLEN - remain_buffer);
+	    remain_buffer = 0;
 	}
 
 	memcpy((UCHAR_PTR)(Info->szBuffer + remain_buffer), pszMessage, uDataLen);
 	Info->remain_num = remain_buffer + uDataLen;
 }
+
+
 //*********************************************************************************************************************************
 // o SHA256_Close()		: 메시지 덧붙이기와 길이 덧붙이기를 수행한 후 마지막 메시지 블록을 가지고 압축함수를 호출하는 함수
 // o 입력				: Info	    - SHA-256 구조체의 포인터 변수

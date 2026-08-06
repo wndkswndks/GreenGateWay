@@ -1,6 +1,9 @@
 #define TRUE  1
 #define FALSE 0
 #define bool BYTE
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "stm32f1xx_hal.h"
 #include "main.h"
@@ -19,6 +22,9 @@ static uint8_t PowerFlag = 0;                           /* Power ?곹깭 Flag */
 
 void Tx_DayTimeSave(uint32_t YYMMDD, uint16_t hhmm);
 void TxAllBuff_Set(uint8_t* msg, uint16_t len);
+uint16_t Get_YYMMDD(void);   // 실제 반환 타입에 맞게 수정
+uint16_t Get_hhmm(void);
+void append_crc16(uint8_t *buff, uint16_t idx);
 
 /* SPI Chip Select */
 static void SELECT(void)
@@ -605,7 +611,7 @@ FATFS *pfs;
 FIL fil;
 FRESULT fres;
 DWORD fre_clust;
-uint32_t total, free;
+uint32_t total, freeQ;
 char buffer[100];
 
 uint8_t SD_Error_Chk(FRESULT errCode, const char* msg)
@@ -636,9 +642,9 @@ uint8_t SD_CheckFreeSpace(void)
   }
 
   total = (uint32_t)((pfs->n_fatent - 2) * pfs->csize * 0.5);
-  free  = (uint32_t)(fre_clust * pfs->csize * 0.5);
+  freeQ  = (uint32_t)(fre_clust * pfs->csize * 0.5);
 
-  printf("Total: %lu KB, Free: %lu KB\r\n", total, free);
+  printf("Total: %lu KB, Free: %lu KB\r\n", total, freeQ);
 
   return 0;
 }
@@ -880,7 +886,7 @@ void SD_Read_Range(const char* dirName, uint32_t yymmdd,  uint16_t startHHMM, ui
 
 
 uint32_t g_NextReadPos = 0;
-uint8_t readSDbuff[300] = {0,};
+uint8_t readSDbuff[1200] = {0,};
 extern UART_HandleTypeDef huart1;
 uint8_t SD_Read_Step_TxMsg(const char* dirName, uint32_t YYMMDD)
 {

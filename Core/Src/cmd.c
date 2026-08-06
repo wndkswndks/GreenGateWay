@@ -1198,10 +1198,21 @@ void TFDH_4_Tx_9999()
 
 uint8_t Fac_Code_Find(uint32_t facCode)
 {
+	uint8_t flashIdx;
 	for(int i =0 ;i < m_ch[0].itemNum;i++)
 	{
 		if(facCode == m_ch[0].item[i].facCode)
 		{
+			return i;
+		}
+		if(m_ch[0].item[i].facCode == 0)
+		{
+			m_ch[0].item[i].facCode = facCode;
+
+			flashIdx = FLASH_GET_IDX_ITEM(i);
+			Flash_Write_Word(flashIdx, facCode);
+			Debug_printf("facAddr %d \r\n",i);
+			Debug_printf("New facCode %u \r\n",facCode);
 			return i;
 		}
 	}
@@ -2873,18 +2884,27 @@ void Rx_Passing_14_PAST()
 				facIdx = Fac_Code_Find(chkBuff[i][0]);
 				if(facIdx != 0xff)
 				{
+					Debug_printf("facAddr %u \r\n",facIdx);
 					Debug_printf("facCode %u \r\n",chkBuff[i][0]);
-					m_ch[ch].item[facIdx].itemCode = chkBuff[i][1];
 
+					m_ch[ch].item[facIdx].itemCode = chkBuff[i][1];
 					flashIdx = FLASH_GET_IDX_ITEM(facIdx);
 					Flash_Write_Word(flashIdx, chkBuff[i][1]);
-
 					Debug_printf("itemCode %u \r\n",chkBuff[i][1]);
+
 					m_ch[ch].item[facIdx].rangeMin = chkBuff_F[i][0];
+					flashIdx = FLASH_GET_IDX_MIN(facIdx);
+					Flash_Write_Word(flashIdx, (uint32_t)chkBuff_F[i][0]);
 					Debug_printf("measureMin %f \r\n",chkBuff_F[i][0]);
+
 					m_ch[ch].item[facIdx].rangeMax = chkBuff_F[i][1];
+					flashIdx = FLASH_GET_IDX_MAX(facIdx);
+					Flash_Write_Word(flashIdx, (uint32_t)chkBuff_F[i][1]);
 					Debug_printf("measureMax %f \r\n",chkBuff_F[i][1]);
+
 					m_ch[ch].item[facIdx].rangeStandard = chkBuff_F[i][2];
+					flashIdx = FLASH_GET_IDX_STAND(facIdx);
+					Flash_Write_Word(flashIdx, (uint32_t)chkBuff_F[i][2]);
 					Debug_printf("measureStandard %f \r\n",chkBuff_F[i][2]);
 
 				}
@@ -3312,8 +3332,8 @@ void Gateway_Config()
 
 
 	Five_Sec_GetData();
-//	TDDH_3_Start(0);
-//	TFDH_4_Start(0);
+	TDDH_3_Start(0);
+	TFDH_4_Start(0);
 
 	ACK_ReSend();
 	TxMsg_ReSend();
