@@ -1003,7 +1003,7 @@ static int raw_decrypt_block(const BYTE *key,
 
     /* Decrypt one 16-byte block -- do NOT call SEED_CBC_Close() */
     SEED_CBC_Process(&info, data, 16, outbuf, &outLen);
-    free(data);
+//    free(data);
 
     if (outLen != 16) {
         return 0;
@@ -1016,7 +1016,7 @@ static int raw_decrypt_block(const BYTE *key,
     }
 
     memcpy(out_plain, result, 16);
-    free(result);
+//    free(result);
 
     return 1;
 }
