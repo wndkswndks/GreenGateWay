@@ -224,10 +224,10 @@ uint32_t rxBuff32[200];
 void qsortTest()// 오름차순으로 정리
 {
 	qsort(rxBuff32, sizeof(rxBuff32) / sizeof(uint32_t), sizeof(uint32_t), compare_32);// u32
-	uint8_t max32 = rxBuff32[200-1];//최대값
+//	uint8_t max32 = rxBuff32[200-1];//최대값
 
     qsort(rxBuff8, sizeof(rxBuff8) / sizeof(uint8_t), sizeof(uint8_t), compare_8);
-    uint8_t max8 = rxBuff8[200 - 1];    // 정렬된 배열의 마지막 요소가 최대값
+//    uint8_t max8 = rxBuff8[200 - 1];    // 정렬된 배열의 마지막 요소가 최대값
 
 }
 

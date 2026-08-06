@@ -1390,7 +1390,7 @@ void SD_Test()
 
 		timeStamp = HAL_GetTick();
 		tt1 = timeStamp;
-		sprintf(timeStr,"%08lu\r\n",HAL_GetTick());
+		sprintf((char*)timeStr,"%08lu\r\n",HAL_GetTick());
 
 		SD_Write_Record("TDAH", Get_YYMMDD(), Get_hhmm(), timeStr, 10);
 		SD_Write_Record("TOFH", Get_YYMMDD(), Get_hhmm(), timeStr, 10);

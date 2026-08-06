@@ -1404,7 +1404,7 @@ int Greenlink_Decrypt(const BYTE *inBuff, BYTE *outBuff, int inLen, int outPutLe
 
 BYTE cipher_out[200] = {0x00};
 BYTE plain_out[200] = {0x00};
-int Greenlink_EncDec_Test()
+void Greenlink_EncDec_Test()
 {
     /* 암호화 */
     BYTE ip[150]         = "Q123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890abcdefghij";
@@ -1419,7 +1419,7 @@ int Greenlink_EncDec_Test()
 }
 
 
-int Greenlink_EncDec_Test_docuTest1()
+void Greenlink_EncDec_Test_docuTest1()
 {
     /* Test Vector 1번용 임시 Key/IV */
     static const BYTE TV1_KEY[16] = {

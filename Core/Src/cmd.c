@@ -269,7 +269,7 @@ void Debug_printf(const char *format, ...) {
 
     // 4. 완성된 텍스트(buffer)를 실제 UART로 전송 (이 부분을 DMA나 인터럽트 함수로 연결)
     // 예: HAL_UART_Transmit_DMA(&huart1, (uint8_t*)buffer, strlen(buffer));
-    HAL_UART_Transmit(&huart2, buffer, strlen(buffer), 100);
+    HAL_UART_Transmit(&huart2, (uint8_t*)buffer, strlen(buffer), 100);
 }
 
 void TxAllBuff_Clear()
@@ -289,7 +289,7 @@ void TxAllBuff_ReSend()
 }
 void TX_ACK(uint8_t cmd)
 {
-    uint8_t msg[1] = MSG_ACK;
+    uint8_t msg[1] = {MSG_ACK,};
     HAL_UART_Transmit(&huart1,msg,1,100);
     Debug_printf("ACK\r\n");
 
@@ -299,7 +299,7 @@ void TX_ACK(uint8_t cmd)
 }
 void ACK_ReSend()
 {
-	uint8_t msg[1] = MSG_ACK;
+	uint8_t msg[1] = {MSG_ACK,};
 	if(m_Gcmd.txAckFlag)
 	{
 		if(HAL_GetTick() - m_Gcmd.txAckTimeStamp>30000 )
@@ -354,13 +354,13 @@ void TxMsg_ReSend()
 }
 void TX_NAK()
 {
-    uint8_t msg[1] = MSG_NAK;
+    uint8_t msg[1] = {MSG_NAK,};
     HAL_UART_Transmit(&huart1,msg,1,100);
     Debug_printf("NAK\r\n");
 }
 void TX_EOT()
 {
-    uint8_t msg[1] = MSG_EOT;
+    uint8_t msg[1] = {MSG_EOT,};
     HAL_UART_Transmit(&huart1,msg,1,100);
     Debug_printf("EOT\r\n");
     m_Gcmd.txUse = 0;
@@ -768,11 +768,10 @@ void TxStr_PW_Input(char* debugStr, uint16_t idx, uint16_t fixLen, uint32_t data
 {
     char str[16] = {0};
     uint8_t encryBuff[16] = {0,};
-	int len = 0, termLen = 0;
 
     Debug_printf("%s ->",debugStr);
 
-	len = snprintf(str, sizeof(str), "%d",data);
+	snprintf(str, sizeof(str), "%d",data);
 
 
     Greenlink_Encrypt((uint8_t*)str, LEN_TCN2_21_11_10, encryBuff);
@@ -2023,7 +2022,6 @@ void YYMMDDhhmm_Cal()
 {
 	static uint32_t timeStamp;
 
-	static uint32_t msCnt;
 	if(HAL_GetTick()-timeStamp >= 1000)
 	{
 		timeStamp = HAL_GetTick();
@@ -2147,7 +2145,7 @@ void Tx_To_RasPi(uint8_t num, char*str)
 	int len;
 
 	len = snprintf(buff, sizeof(buff), "[<%u,%s>]", num, str);
-	HAL_UART_Transmit(&huart1, buff, len, 100);
+	HAL_UART_Transmit(&huart1, (uint8_t*)buff, len, 100);
 	HAL_Delay(50);
 }
 
@@ -2202,9 +2200,7 @@ void Protect_To_Nomal(uint8_t num)
 }
 void Five_Sec_GetData()
 {
-	static uint32_t timeStamp;
 	uint8_t cnt = m_ch[0].status5SecCnt;
-	uint8_t nomal = 0;
 	uint8_t valueXXX[5] = {0,};// 원래 항상 저장되야함
 
 	if(m_time.secChange1 && (m_time.sec%5 == 0))
@@ -2338,7 +2334,7 @@ void Five_Min_GetData()
 			}
 		}
 		m_ch[0].item[i].value[FIV_IDX] = sum/sumCnt;
-		m_ch[0].item[i].valueBuff[min5Cnt] = m_ch[0].item[i].value[FIV_IDX];
+		m_ch[0].item[i].valueBuff[min5Cnt] = (uint8_t)m_ch[0].item[i].value[FIV_IDX];
 	}
 
 	for(int i =0 ;i < 5;i++) //가동상태
@@ -2356,7 +2352,6 @@ void Five_Min_GetData()
 	}
 
 	uint8_t couple;
-	static uint8_t step = STEP0;
 	for(int i =0 ;i < 5;i++)// 배출시설 정상여부
 	{
 		if(GET_FAC_C(m_ch[0].item[i].facCode) == FACI_CODE_E)
@@ -2721,7 +2716,7 @@ void Rx_Passing_10_PUPG()
 		Tx_To_RasPi(PUPG_F_USER, m_ch[ch].FTPid);
 		Tx_To_RasPi(PUPG_F_PWD, m_ch[ch].FTPpwd );
 		Tx_To_RasPi(PUPG_F_FTP_TYPE, &m_ch[ch].FTPtype);
-		Tx_To_RasPi(PUPG_F_NEW_IP, m_ch[ch].IP);
+		Tx_To_RasPi(PUPG_F_NEW_IP, (char*)m_ch[ch].IP);
 		Tx_To_RasPi(PUPG_F_PRE_TUPG, "tupg all");
 		Tx_To_RasPi(PUPG_F_START, "start");
 
@@ -2969,11 +2964,8 @@ void Rx_Passing_16_PFRS()
         if(Check_crc16(m_Gcmd.passingBuff, variableIdx))return;
         Debug_printf("> OK\r\n");
 
-		uint8_t facC, facIdx, flashIdx;
-		uint32_t facNum;
+		uint8_t facC, facIdx, flashIdx, facIdxCp;
 
-		uint8_t facCcp, facIdxCp;
-		uint32_t facNumCp;
 		m_ch[ch].protectRelyCnt = relationCount;
 		Debug_printf("protectRelyCnt %u \r\n",relationCount);
         for(int i = 0; i < relationCount; i++)
@@ -3636,7 +3628,7 @@ void Uart2_Passing_Pop(int cmd, int data)
 				m_ch[0].item[facCodeAddr].rangeMin = minVal;
 
 				flashIdx = FLASH_GET_IDX_MIN(facCodeAddr);
-				Flash_Write_Word(flashIdx, minVal);
+				Flash_Write_Word(flashIdx, (uint32_t)minVal);
 				Debug_printf("minVal : [%hhu] %.2f ",facCodeAddr, minVal);
 			}
 		break;
@@ -3649,7 +3641,7 @@ void Uart2_Passing_Pop(int cmd, int data)
 			{
 				m_ch[0].item[facCodeAddr].rangeMax = maxVal;
 				flashIdx = FLASH_GET_IDX_MAX(facCodeAddr);
-				Flash_Write_Word(flashIdx, maxVal);
+				Flash_Write_Word(flashIdx, (uint32_t)maxVal);
 				Debug_printf("maxVal : [%hhu] %.2f ",facCodeAddr, maxVal);
 			}
 		break;
@@ -3662,7 +3654,7 @@ void Uart2_Passing_Pop(int cmd, int data)
 			{
 				m_ch[0].item[facCodeAddr].rangeStandard = standardVal;
 				flashIdx = FLASH_GET_IDX_STAND(facCodeAddr);
-				Flash_Write_Word(flashIdx, standardVal);
+				Flash_Write_Word(flashIdx, (uint32_t)standardVal);
 				Debug_printf("standardVal : [%hhu] %.2f ",facCodeAddr, standardVal);
 			}
 		break;
