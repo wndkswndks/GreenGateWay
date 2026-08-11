@@ -1355,51 +1355,70 @@ uint8_t SD_GetLastWritten(const char* dirName, LastRecord* out)
 }
 
 
-uint8_t SD_GetLast_1_TDAH(uint32_t* YYMMDDhhmm)
+uint32_t SD_GetLast_1_TDAH()
 {
 	LastRecord last;
+	uint32_t YYMMDDhhmm;
 	if(SD_GetLastWritten("TDAH", &last))
 	{
 		// last.yymmdd, last.hhmm = 마지막으로 쓴 날짜/시각
 		// 이걸 현재 시각이랑 비교해서 그 사이 안 보낸 구간 처리
 
-		*YYMMDDhhmm = last.yymmdd*10000 + last.hhmm;
+		YYMMDDhhmm = last.yymmdd*10000 + last.hhmm;
+
+		if(Chk_YYMMDDhhmm(YYMMDDhhmm))
+		{
+			return YYMMDDhhmm;
+		}
 	}
-	else
-	{
-		// 마지막 기록 없음 (첫 부팅이거나 폴더 비었음)
-	}
-	return 1;
+
+	return 0;
 }
 
 uint32_t tt1,tt2;
 uint8_t clrFlag;
+
+uint8_t timeStr[10][103] =
+{
+"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\r\n",
+"1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111\r\n",
+"2222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222\r\n",
+"3333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333\r\n",
+"4444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444\r\n",
+"5555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555\r\n",
+"6666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666\r\n",
+"7777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777\r\n",
+"8888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888\r\n",
+"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\r\n"
+};
+
 void SD_Test()
 {
 	uint16_t hhmm = 900;
-	uint8_t timeStr[11] ={0,};
 	static uint32_t timeStamp;
-
+	static uint8_t cnt = 0;
+	static uint32_t totalCnt;
 //	if(clrFlag)
 //	{
 //		clrFlag = 0;
 //		SD_CleanupAll();
 //	}
-	if(HAL_GetTick()-timeStamp >= 5000)
+	if(HAL_GetTick()-timeStamp >= 1000)
 	{
-
 		timeStamp = HAL_GetTick();
 		tt1 = timeStamp;
-		sprintf((char*)timeStr,"%08lu\r\n",HAL_GetTick());
 
-		SD_Write_Record("TDAH", Get_YYMMDD(), Get_hhmm(), timeStr, 10);
-		SD_Write_Record("TOFH", Get_YYMMDD(), Get_hhmm(), timeStr, 10);
-		SD_Write_Record("TDDH", Get_YYMMDD(), Get_hhmm(), timeStr, 10);
-		SD_Write_Record("TFDH", Get_YYMMDD(), Get_hhmm(), timeStr, 10);
-		SD_Write_Record("TNOH", Get_YYMMDD(), Get_hhmm(), timeStr, 10);
+		SD_Write_Record("TDAH", Get_YYMMDD(), Get_hhmm(), timeStr[cnt], 102);
+		SD_Write_Record("TOFH", Get_YYMMDD(), Get_hhmm(), timeStr[cnt], 102);
+		SD_Write_Record("TDDH", Get_YYMMDD(), Get_hhmm(), timeStr[cnt], 102);
+		SD_Write_Record("TFDH", Get_YYMMDD(), Get_hhmm(), timeStr[cnt], 102);
+		SD_Write_Record("TNOH", Get_YYMMDD(), Get_hhmm(), timeStr[cnt], 102);
+		cnt++;
+		cnt %= 10;
 
-		printf("%08lu\r\n",timeStamp);
 		tt2= HAL_GetTick() -tt1;
+		printf("%u, %u \r\n",totalCnt, tt2);
+		totalCnt++;
 	}
 
 //	SD_Read_Range("TDAH",260623, 0, 2355);

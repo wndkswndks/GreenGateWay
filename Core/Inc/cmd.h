@@ -162,6 +162,33 @@
 #define	CMD_PCN2	"PCN2"
 #define	CMD_PRBT	"PRBT"
 
+#define	CMD_CTRL_START	"[<,"
+#define	CMD_CTRL_TIME_RX		"[<time,"
+#define	CMD_CTRL_TIME_REQ		"[<time>]"
+
+#define	CMD_CTRL_ABORT			"[<abort>]"
+#define	CMD_CTRL_DOWNFAIL		"[<downFail>]"
+#define	CMD_CTRL_FLASHFALE		"[<flashFail>]"
+#define	CMD_CTRL_TUPG			"[<TUPG>]"
+#define	CMD_CTRL_GW_IP_RX		"[<gwip,192.168."
+#define	CMD_CTRL_GW_IP_REQ		"[<gwip>]"
+#define	CMD_CTRL_BOOT			"[<boot>]"
+#define	CMD_CTRL_SVR_IP			"[<svrip>]"
+
+#define	CMD_CTRL_END	">]"
+
+
+//[<time,YYMMDDhhmm>]
+//[<n>]
+//[<abort>]
+//[<downFail>]
+//[<flashFail>]
+//[<TUPG>]
+
+
+
+
+
 #define	TXMODE_HAF	 "HAF"
 #define	TXMODE_FIV	  "FIV"
 #define	TXMODE_ALL 	"ALL"
@@ -206,6 +233,8 @@ typedef enum
 	CMD_SET_STAND_VAL = 5,
 	CMD_READ_ITEM = 6,
 	CMD_SET_COUPLE = 7,
+	CMD_SET_IP_3	= 8,
+	CMD_SET_IP_4	= 9,
 
 } UART_E;
 
@@ -755,6 +784,8 @@ typedef enum
 	ITEM_MAX_ADDR = 4,
 	ITEM_MAX_NUM = 5,
 
+	FLAG_PUPG = 33,
+
 	FLASH_IDX_INIT = 0,
 
 	FLASH_IDX_FAC_0 = 1,
@@ -792,6 +823,12 @@ typedef enum
 	FLASH_IDX_MAX_4 = 29,
 	FLASH_IDX_STAND_4 = 30,
 
+	FLASH_IDX_PUPG_EN = 49,
+	FLASH_IDX_IP_OLD_2 = 50,//IP 0.1.2.3
+	FLASH_IDX_IP_OLD_3 = 51,//IP 0.1.2.3
+
+	FLASH_IDX_IP_NEW_2 = 52,//IP 0.1.2.3
+	FLASH_IDX_IP_NEW_3 = 53,//IP 0.1.2.3
 	FLASH_IDX_MAX_OVER,
 
 
@@ -938,6 +975,8 @@ typedef struct
 	uint32_t cmd4TxTime;
 	uint32_t cmd4TxDay;
 	uint8_t cmd4Tx9999Flag;
+
+	uint8_t cmd10En;
 } CHIMNEY_T;
 
 
@@ -990,10 +1029,13 @@ uint32_t Get_YYMMDDhhmm();
 void Five_Min_GetData();
 void Thirty_Min_GetData();
 void Five_Sec_GetData();
-uint8_t SD_GetLast_1_TDAH(uint32_t* YYMMDDhhmm);
+uint32_t SD_GetLast_1_TDAH();
 
 uint32_t Get_YYMMDD();
 uint16_t Get_hhmm();
+uint32_t Rx_Init_Passing();
+uint8_t Chk_YYMMDDhhmm(uint32_t YYMMDDhhmm);
+void SD_Test();
 
 /*  			function end  			*/
 

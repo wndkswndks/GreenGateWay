@@ -178,7 +178,7 @@ static unsigned short crctable[256] = {
 
 #define FLASH_USER_START_ADDR   0x0801FC00 // 마지막 섹터 주소 예시
 
-#define FLASH_SIZE_WORDS 50
+#define FLASH_SIZE_WORDS 256
 uint32_t flashBuff[FLASH_SIZE_WORDS];
 uint8_t flashSave = 0;
 
@@ -245,6 +245,16 @@ void Flash_init()
 #endif
 	Flash_Read_All_Word();
 
+	for(int i =0 ;i < m_ch[0].itemNum;i++)
+	{
+		m_ch[0].item[i].facCode = flashBuff[FLASH_GET_IDX_FAC(i)];
+		m_ch[0].item[i].itemCode = flashBuff[FLASH_GET_IDX_ITEM(i)];
+		m_ch[0].item[i].couple = flashBuff[FLASH_GET_IDX_COUPLE(i)];
+
+		m_ch[0].item[i].rangeMin = (float)flashBuff[FLASH_GET_IDX_MIN(i)];
+		m_ch[0].item[i].rangeMax = (float)flashBuff[FLASH_GET_IDX_MAX(i)];
+		m_ch[0].item[i].rangeStandard = (float)flashBuff[FLASH_GET_IDX_STAND(i)];
+	}
 
 //	for(int i =0 ;i < FLASH_SIZE_WORDS;i++)
 //	{
@@ -364,6 +374,15 @@ void TX_EOT()
     HAL_UART_Transmit(&huart1,msg,1,100);
     Debug_printf("EOT\r\n");
     m_Gcmd.txUse = 0;
+}
+void TX_SVR_IP()
+{
+	uint8_t str[30] ={0,};
+	uint8_t len;
+	len = snprintf(str,sizeof(str),"[<svrip,192.168.%d.%d>]",m_ch[0].IP[2], m_ch[0].IP[3]);
+	HAL_UART_Transmit(&huart1, (uint8_t*)str, len, 100);
+	Debug_printf("[<svrip,192.168.%d.%d>]\r\n",m_ch[0].IP[2], m_ch[0].IP[3]);
+
 }
 
 void TX_Memo(uint8_t cmd)
@@ -984,6 +1003,8 @@ void TOFH_2_Start(uint8_t ch, uint32_t startDay, uint32_t endDay)
     uint32_t eTime = endDay%10000;
 	uint32_t s5Time, e5Time;
 	uint32_t s30Time, e30Time;
+	uint32_t s5TimeIdx, e5TimeIdx;
+	uint32_t s30TimeIdx, e30TimeIdx;
 	uint8_t s5flag = 1, e5flag = 1, s30flag = 1, e30flag = 1;
     uint16_t TimeSE_30[4][2]= {{0,DAY_1_30_END},{0,DAY_1_30_END},{0,DAY_1_30_END},{0,DAY_1_30_END}};
     uint16_t TimeSE_5[4][2]= {{0,DAY_1_5_END},{0,DAY_1_5_END},{0,DAY_1_5_END},{0,DAY_1_5_END}};
@@ -991,50 +1012,90 @@ void TOFH_2_Start(uint8_t ch, uint32_t startDay, uint32_t endDay)
     uint32_t yymmdd = sDay;
 
 
+
 	s5Time = sTime;
 	e5Time = eTime;
 	s30Time = sTime;
 	e30Time = eTime;
 
+
+	if(s5Time >= 2355)//max
+	{
+		s5flag = 0;
+		s5TimeIdx = 0;
+	}
+	if(e5Time >= 2355)//max
+	{
+		e5flag = 0;
+		e5TimeIdx = 0;
+	}
+	if(s30Time >= 2355)//max
+	{
+		s30flag = 0;
+		s30TimeIdx = 0;
+	}
+	if(e30Time >= 2355)//max
+	{
+		e30flag = 0;
+		e30TimeIdx = 0;
+	}
+
 	for(int i =0 ;i < DAY_1_5CNT;i++)
 	{
-		if(eep3Day5MinTable[i] >= s5Time && s5flag)
+		if(eep3Day5MinTable[i] > s5Time && s5flag)
 		{
 			s5flag = 0;
-			s5Time = i;
+			s5TimeIdx = i;
 		}
+
 		if(eep3Day5MinTable[i] >= e5Time && e5flag)
 		{
 			e5flag = 0;
-			if(i>0)e5Time = i-1;
-			else e5Time = 0;
+			if(i>0)e5TimeIdx = i-1;
+			else e5TimeIdx = 0;
 		}
 	}
-
 	for(int i =0 ;i < DAY_1_30CNT;i++)
 	{
-		if(eep3Day30MinTable[i] >= s30Time && s30flag)
+		if(eep3Day30MinTable[i] > s30Time && s30flag)
 		{
 			s30flag = 0;
-			s30Time = i;
+			s30TimeIdx = i;
 		}
 		if(eep3Day30MinTable[i] >= e30Time && e30flag)
 		{
 			e30flag = 0;
-			if(i > 0)e30Time = i-1;
-			else e30Time = 0;
+			if(i > 0)e30TimeIdx = i-1;
+			else e30TimeIdx = 0;
 		}
 	}
 
-	memset(m_ch[ch].cmd2TimeSE, 0, sizeof(m_ch[ch].cmd2TimeSE));
+	if((sDay == eDay) && (s5TimeIdx > e5TimeIdx))
+	{
+		Debug_printf("Pass [2]\r\n");
+		return;
+	}
+	else
+	{
+		if((sDay == eDay) && (s30TimeIdx > e30TimeIdx))
+		{
+			if(m_ch[0].transferMode == TXMODE_HAF_NUM)
+			{
+				Debug_printf("Pass [2]\r\n");
+				return;
+			}
+		}
+	}
 
+
+	memset(m_ch[ch].cmd2TimeSE, 0, sizeof(m_ch[ch].cmd2TimeSE));
 	memcpy(m_ch[ch].cmd2TimeSE[TXMODE_HAF_NUM], TimeSE_30, sizeof(TimeSE_30));
 	memcpy(m_ch[ch].cmd2TimeSE[TXMODE_FIV_NUM], TimeSE_5, sizeof(TimeSE_5));
 
 
 
-	m_ch[ch].cmd2TimeSE[TXMODE_HAF_NUM][0][0] = s30Time;
-	m_ch[ch].cmd2TimeSE[TXMODE_FIV_NUM][0][0] = s5Time;
+	m_ch[ch].cmd2TimeSE[TXMODE_HAF_NUM][0][0] = s30TimeIdx;
+	m_ch[ch].cmd2TimeSE[TXMODE_FIV_NUM][0][0] = s5TimeIdx;
 	uint8_t dayCnt = 0;
 
 	Debug_printf("yymmdd %u\r\n", yymmdd);
@@ -1044,8 +1105,8 @@ void TOFH_2_Start(uint8_t ch, uint32_t startDay, uint32_t endDay)
 		m_ch[ch].cmd2DayBuff[i] = yymmdd;
 		if(yymmdd == eDay)
 		{
-			m_ch[ch].cmd2TimeSE[TXMODE_HAF_NUM][i][1] = e30Time;
-			m_ch[ch].cmd2TimeSE[TXMODE_FIV_NUM][i][1] = e5Time;
+			m_ch[ch].cmd2TimeSE[TXMODE_HAF_NUM][i][1] = e30TimeIdx;
+			m_ch[ch].cmd2TimeSE[TXMODE_FIV_NUM][i][1] = e5TimeIdx;
 			m_ch[ch].cmd2TotalDay = i;
 			Debug_printf("yymmdd %u\r\n",yymmdd);
 			break;
@@ -1070,10 +1131,10 @@ void TOFH_2_Start(uint8_t ch, uint32_t startDay, uint32_t endDay)
 
 
 
-	Debug_printf("s5Time %u\r\n", eep3Day5MinTable[s5Time]);
-	Debug_printf("e5Time %u\r\n", eep3Day5MinTable[e5Time]);
-	Debug_printf("s30Time %u\r\n", eep3Day30MinTable[s30Time]);
-	Debug_printf("e30Time %u\r\n", eep3Day30MinTable[e30Time]);
+	Debug_printf("s5Time %u\r\n", eep3Day5MinTable[s5TimeIdx]);
+	Debug_printf("e5Time %u\r\n", eep3Day5MinTable[e5TimeIdx]);
+	Debug_printf("s30Time %u\r\n", eep3Day30MinTable[s30TimeIdx]);
+	Debug_printf("e30Time %u\r\n", eep3Day30MinTable[e30TimeIdx]);
 
 	yymmdd = sDay;
 	uint32_t YYMMDDhhmm;
@@ -1223,7 +1284,7 @@ uint8_t Fac_Code_Get_Frind(uint8_t coupleAdd, uint32_t* facCodeE, uint32_t* facC
 {
 	uint8_t coupleA, coupleNum;
 	uint8_t facCodeC;
-	for(int i =0 ;i < 5;i++)
+	for(int i =0 ;i < m_ch[0].itemNum;i++)
 	{
 		facCodeC = GET_FAC_C(m_ch[0].item[i].facCode);
 
@@ -1716,6 +1777,15 @@ void test_sha256(void)
 void Test_Config()
 {
 //    test_sha256();
+
+	m_time.YY = 26;
+	m_time.MM = 8;
+	m_time.DD = 9;
+
+	m_time.hour = 9;
+	m_time.min = 0;
+	m_time.sec = 0;
+
 }
 
 
@@ -2139,6 +2209,59 @@ uint32_t Get_YYMMDDhhmm()
 	return YYMMDDhhmm;
 }
 
+uint8_t Chk_YYMMDDhhmm(uint32_t YYMMDDhhmm)
+{
+	uint32_t YYMMDD;
+	uint32_t hhmm;
+	uint32_t YY, MM, DD, hh, mm;
+	uint8_t ok = 0;
+
+
+	YYMMDD = YYMMDDhhmm/10000;
+	hhmm = YYMMDDhhmm%10000;
+
+	YY = DAY_YY(YYMMDD);
+	MM = DAY_MM(YYMMDD);
+	DD = DAY_DD(YYMMDD);
+	hh = hhmm/100;
+	mm = hhmm%100;
+
+	if(26 <= YY && YY <= 45) ok += 1;
+	if(1 <= MM && MM <= 12) ok += 1;
+	if(1 <= DD && DD <= 31) ok += 1;
+	if(hh <= 23) ok += 1;
+	if(mm <= 59) ok += 1;
+	if(ok==5)
+	{
+
+		return 1;
+	}
+
+	return 0;
+
+}
+uint32_t REQ_RbryValeu(uint8_t* cmd)
+{
+	char buff[20] = {0,};
+	memcpy(buff, cmd, strlen(cmd));
+	uint32_t status = 0;
+	for(int i =0 ;i < 3;i++)
+	{
+		Debug_printf("Cmd REQ %s \r\n",cmd);
+		HAL_UART_Transmit(&huart1, (uint8_t*)buff, strlen(buff), 100);
+		HAL_Delay(700);
+		status = Rx_Init_Passing();
+
+		if(status)
+		{
+			return 1;
+		}
+	}
+	Debug_printf("> Fail Rsp Time\r\n");
+	return 0;
+}
+
+
 void Tx_To_RasPi(uint8_t num, char*str)
 {
 	char buff[60] = {0,};
@@ -2151,7 +2274,7 @@ void Tx_To_RasPi(uint8_t num, char*str)
 
 void DisposProtec_Config()
 {
-	for(int i =0 ;i < 5;i++)
+	for(int i =0 ;i < m_ch[0].itemNum;i++)
 	{
 		if(m_ch[0].item[i].disposDelFlag ==0 && m_ch[0].item[i].protectDelFlag==0)//step0
 		{
@@ -2208,7 +2331,7 @@ void Five_Sec_GetData()
 		m_time.secChange1 = 0;
 		if(m_ch[0].dataStatus== STATUS_UNDER_CHECK)
 		{
-			for(int i =0 ;i < 5;i++)
+			for(int i =0 ;i < m_ch[0].itemNum;i++)
 			{
 				m_ch[0].item[i].status5sec[cnt] = STATUS_UNDER_CHECK;
 				m_ch[0].item[i].value5sec[cnt] = valueXXX[i];// 측정값
@@ -2217,7 +2340,7 @@ void Five_Sec_GetData()
 		}
 		else if(m_ch[0].dataStatus== STATUS_COMM_ERROR)
 		{
-			for(int i =0 ;i < 5;i++)
+			for(int i =0 ;i < m_ch[0].itemNum;i++)
 			{
 				m_ch[0].item[i].status5sec[cnt] = STATUS_COMM_ERROR;
 				m_ch[0].item[i].value5sec[cnt] = 0;
@@ -2225,10 +2348,10 @@ void Five_Sec_GetData()
 		}
 		else
 		{
-			for(int i =0 ;i < 5;i++)
+			for(int i =0 ;i < m_ch[0].itemNum;i++)
 			{
 				m_ch[0].item[i].value5sec[cnt] =valueXXX[i];// 측정값
-				if(m_ch[0].item[i].value5sec[cnt] < 0) // 마이너스값만 아니면 되는데 아닐수가없음
+				if(m_ch[0].item[i].value5sec[cnt] > 200) // 마이너스값만 아니면 되는데 아닐수가없음 ,최대값이상
 					m_ch[0].item[i].status5sec[cnt] = STATUS_ABNORMAL;
 				else
 					m_ch[0].item[i].status5sec[cnt] = STATUS_NORMAL;
@@ -2252,7 +2375,7 @@ void Five_Min_GetData()
 	uint8_t sumCnt = 0;
 	uint8_t min5Cnt = m_ch[0].status5MinCnt;
 
-	for(int i =0 ;i < 5;i++)
+	for(int i =0 ;i < m_ch[0].itemNum;i++)
 	{
 		if(m_ch[0].item[i].disposDelTimeCnt && m_ch[0].item[i].disposDelFlag == 1)//가동유예
 		{
@@ -2272,7 +2395,7 @@ void Five_Min_GetData()
 		}
 	}
 
-	for(int i =0 ;i < 5;i++) //자료상태
+	for(int i =0 ;i < m_ch[0].itemNum;i++) //자료상태
 	{
 		nomalCnt = 0; abnomalCnt = 0; commErrCnt = 0; underChkCnt = 0;
 		for(int j =0 ;j < 60; j++)
@@ -2313,7 +2436,7 @@ void Five_Min_GetData()
 		m_ch[0].item[i].statusBuff[min5Cnt] = m_ch[0].item[i].status[FIV_IDX];
 	}
 
-	for(int i =0 ;i < 5;i++)// 측정값
+	for(int i =0 ;i < m_ch[0].itemNum;i++)// 측정값
 	{
 		sum = 0;
 		sumCnt = 0;
@@ -2337,7 +2460,7 @@ void Five_Min_GetData()
 		m_ch[0].item[i].valueBuff[min5Cnt] = (uint8_t)m_ch[0].item[i].value[FIV_IDX];
 	}
 
-	for(int i =0 ;i < 5;i++) //가동상태
+	for(int i =0 ;i < m_ch[0].itemNum;i++) //가동상태
 	{
 		if(m_ch[0].item[i].status[FIV_IDX] == STATUS_NORMAL)
 		{
@@ -2352,7 +2475,7 @@ void Five_Min_GetData()
 	}
 
 	uint8_t couple;
-	for(int i =0 ;i < 5;i++)// 배출시설 정상여부
+	for(int i =0 ;i < m_ch[0].itemNum;i++)// 배출시설 정상여부
 	{
 		if(GET_FAC_C(m_ch[0].item[i].facCode) == FACI_CODE_E)
 		{
@@ -2391,7 +2514,7 @@ void Thirty_Min_GetData()
 	uint8_t abnomal8Cnt = 0, abnomal9Cnt = 0;
 	uint16_t sum =0;
 	uint8_t sumCnt = 0;
-	for(int i =0 ;i < 5;i++) //자료상태
+	for(int i =0 ;i < m_ch[0].itemNum;i++) //자료상태
 	{
 		nomalCnt = 0; abnomalCnt = 0; commErrCnt = 0; underChkCnt = 0;
 		for(int j =0 ;j < 6; j++)
@@ -2430,7 +2553,7 @@ void Thirty_Min_GetData()
 	}
 
 
-	for(int i =0 ;i < 5;i++)// 측정값
+	for(int i =0 ;i < m_ch[0].itemNum;i++)// 측정값
 	{
 		sum = 0;
 		sumCnt = 0;
@@ -2454,7 +2577,7 @@ void Thirty_Min_GetData()
 	}
 
 	uint8_t operStatusCnt = 0;
-	for(int i =0 ;i < 5;i++) //가동상태
+	for(int i =0 ;i < m_ch[0].itemNum;i++) //가동상태
 	{
 		operStatusCnt = 0;
 		for(int j =0 ;j < 6;j++)
@@ -2468,7 +2591,7 @@ void Thirty_Min_GetData()
 	}
 
 
-	for(int i =0 ;i < 5;i++) //자료상태
+	for(int i =0 ;i < m_ch[0].itemNum;i++) //자료상태
 	{
 		nomalCnt = 0; abnomalCnt = 0; abnomal8Cnt = 0; abnomal9Cnt = 0;
 		for(int j =0 ;j < 6; j++)
@@ -2495,7 +2618,7 @@ void Thirty_Min_GetData()
 
 
 
-	for(int i =0 ;i < 5;i++)
+	for(int i =0 ;i < m_ch[0].itemNum;i++)
 	{
 		for(int j =0 ;j < 6;j++)
 		{
@@ -2700,6 +2823,8 @@ void Rx_Passing_10_PUPG()
         memcpy(m_ch[ch].FTPid, strData10R, LEN_PUPG10_9_10);
         memcpy(m_ch[ch].FTPpwd, strData10R_2, LEN_PUPG10_10_10);
         memcpy(m_ch[ch].IP, tempIpBuff, 4);
+		Flash_Write_Word(FLASH_IDX_IP_NEW_2, m_ch[ch].IP[2]);
+		Flash_Write_Word(FLASH_IDX_IP_NEW_3, m_ch[ch].IP[3]);
 
         Debug_printf("FTPtype %c \r\n",strData1[0]);
         Debug_printf("FTPipDomain %s \r\n",strData40R);
@@ -3185,7 +3310,8 @@ void Rx_Get_Gateway(uint8_t rxData)
 	m_Gcmd.rxCnt %= 50;
 	m_Gcmd.rxTimeStamp = HAL_GetTick();
 }
-#define CHK_RX_CMD(CMD) 	strncmp((char*)m_Gcmd.passingBuff, CMD, 4)
+#define CHK_RX_CMD(CMD) 	strncmp((char*)m_Gcmd.passingBuff, (CMD), 4)
+#define CHK_RX_CTRL_CMD(CMD, NUM)   strncmp((char*)m_Gcmd.passingBuff, (CMD), (NUM))
 
 void Rx_Gateway_Config()//
 {
@@ -3211,15 +3337,133 @@ void Rx_Gateway_Config()//
         else if(CHK_RX_CMD(CMD_PODT) == 0){Rx_Passing_19_PODT();}
         else if(CHK_RX_CMD(CMD_PCN2) == 0){Rx_Passing_20_PCN2();}
         else if(CHK_RX_CMD(CMD_PRBT) == 0){Rx_Passing_22_PRBT();}
+		else if(CHK_RX_CTRL_CMD(CMD_CTRL_SVR_IP, 9) == 0)
+		{
+
+		}
+
+
         else if(m_Gcmd.passingBuff[0] == MSG_ACK && m_Gcmd.passingCnt == 1)Rx_Passing_ACK();
         else if(m_Gcmd.passingBuff[0] == MSG_NAK && m_Gcmd.passingCnt == 1)Rx_Passing_NAK();
         else if(m_Gcmd.passingBuff[0] == MSG_EOT && m_Gcmd.passingCnt == 1)Rx_Passing_EOT();
 
+	}
+	memset(m_Gcmd.passingBuff, 0, sizeof(m_Gcmd.passingBuff));
+	m_Gcmd.passingCnt = 0;
+	m_Gcmd.rxTimeStamp = 0;
+	m_Gcmd.rxCnt = 0;
+}
+
+
+
+uint32_t Rx_Init_Passing()
+{
+	uint32_t returnData = 0;
+	if(HAL_GetTick() - m_Gcmd.rxTimeStamp>30 && m_Gcmd.rxTimeStamp)
+	{
+		memcpy(m_Gcmd.passingBuff, m_Gcmd.rxBuff, m_Gcmd.rxCnt);
+		memset(m_Gcmd.rxBuff, 0, sizeof(m_Gcmd.rxBuff));
+		m_Gcmd.rxCnt = 0;
+		m_Gcmd.passingCnt = m_Gcmd.rxCnt;
+
+		//：[<time,2608081330>]
+        if(CHK_RX_CTRL_CMD(CMD_CTRL_TIME_RX, 7) == 0)
+        {
+			uint32_t YYMMDDhhmm = (uint32_t)strtoul((char*)m_Gcmd.passingBuff + 7, NULL, 10);
+			uint32_t hhmm;
+			Debug_printf("> dayTime : %u \r\n", YYMMDDhhmm);
+
+			if(Chk_YYMMDDhhmm(YYMMDDhhmm))
+			{
+				m_time.wakeUpDayTime = YYMMDDhhmm;
+				m_time.YY = DAY_YY(YYMMDDhhmm);
+				m_time.MM = DAY_MM(YYMMDDhhmm);
+				m_time.DD = DAY_DD(YYMMDDhhmm);
+				hhmm = YYMMDDhhmm%10000;
+				m_time.hour = hhmm/100;
+				m_time.min = hhmm%100;
+				m_time.sec = 0;
+				Debug_printf("Now DayTime : %u\r\n", YYMMDDhhmm);
+				returnData = 1;
+			}
+        }
+        else if(CHK_RX_CTRL_CMD(CMD_CTRL_GW_IP_RX, 17) == 0)
+        {
+			//Save gw ip
+			//[<gwip,192.168.xxx.xxx>]
+			int xxx = 0, yyy = 0;
+		    int parsed = sscanf((char*)m_Gcmd.passingBuff, "[<gwip,192.168.%3d.%3d>]", &xxx, &yyy);
+
+		    if (parsed == 2 && (xxx >= 0 && xxx <= 255) && (yyy >= 0 && yyy <= 255))
+		    {
+				m_ch[0].GWip[2] = xxx;
+				m_ch[0].GWip[3] = yyy;
+				Debug_printf("192.168.%d.%d\r\n", xxx, yyy);
+				returnData = 1;
+		    }
+
+        }
+        else if(CHK_RX_CTRL_CMD(CMD_CTRL_TUPG, 8) == 0)
+        {
+			//New ip TUPG
+			m_ch[0].IP[2] = flashBuff[FLASH_IDX_IP_NEW_2];
+			m_ch[0].IP[3] = flashBuff[FLASH_IDX_IP_NEW_3];
+			Flash_Write_Word(FLASH_IDX_IP_OLD_2, m_ch[0].IP[2]);
+			Flash_Write_Word(FLASH_IDX_IP_OLD_3, m_ch[0].IP[3]);
+			m_ch[0].cmd10En = FLAG_PUPG;
+			m_Gcmd.txCmd = ID_TDAH_1;
+			Debug_printf("Succese TUPG \r\n");
+			returnData = 1;
+        }
+        else if(CHK_RX_CTRL_CMD(CMD_CTRL_ABORT, 8) == 0)
+        {
+			//Old ip TUPG
+			m_ch[0].IP[2] = flashBuff[FLASH_IDX_IP_OLD_2];
+			m_ch[0].IP[3] = flashBuff[FLASH_IDX_IP_OLD_3];
+			m_ch[0].cmd10En = FLAG_PUPG;
+			m_Gcmd.txCmd = ID_TDAH_1;
+			Debug_printf("Fail TUPG ABORT\r\n");
+			returnData = 1;
+        }
+		else if(CHK_RX_CTRL_CMD(CMD_CTRL_DOWNFAIL, 12) == 0)
+		{
+			//Old ip TUPG
+			m_ch[0].IP[2] = flashBuff[FLASH_IDX_IP_OLD_2];
+			m_ch[0].IP[3] = flashBuff[FLASH_IDX_IP_OLD_3];
+			m_ch[0].cmd10En = FLAG_PUPG;
+			m_Gcmd.txCmd = ID_TDAH_1;
+			Debug_printf("Fail TUPG DOWNFAIL\r\n");
+			returnData = 1;
+		}
+		else if(CHK_RX_CTRL_CMD(CMD_CTRL_FLASHFALE, 13) == 0)
+		{
+			//Old ip TUPG
+			m_ch[0].IP[2] = flashBuff[FLASH_IDX_IP_OLD_2];
+			m_ch[0].IP[3] = flashBuff[FLASH_IDX_IP_OLD_3];
+			m_ch[0].cmd10En = FLAG_PUPG;
+			m_Gcmd.txCmd = ID_TDAH_1;
+			Debug_printf("Fail TUPG FLASHFALE\r\n");
+			returnData = 1;
+		}
+		else Debug_printf("NO good init msg\r\n");
+
+
         memset(m_Gcmd.passingBuff, 0, sizeof(m_Gcmd.passingBuff));
         m_Gcmd.passingCnt = 0;
 		m_Gcmd.rxTimeStamp = 0;
-		m_Gcmd.rxCnt = 0;
+
+		return returnData;
 	}
+	else
+	{
+		memset(m_Gcmd.passingBuff, 0, sizeof(m_Gcmd.passingBuff));
+        m_Gcmd.passingCnt = 0;
+		m_Gcmd.rxTimeStamp = 0;
+
+		Debug_printf("> no Rsp Time\r\n");
+		return 0;
+	}
+
 }
 
 void Tx_Gateway_Config(uint8_t ch)
@@ -3289,32 +3533,36 @@ void Tx_Gateway_Config(uint8_t ch)
 
 void Gateway_Init()
 {
-	Flash_init();
-	for(int i =0 ;i < 5;i++)
-	{
-		m_ch[0].item[i].facCode = flashBuff[FLASH_GET_IDX_FAC(i)];
-		m_ch[0].item[i].itemCode = flashBuff[FLASH_GET_IDX_ITEM(i)];
-		m_ch[0].item[i].couple = flashBuff[FLASH_GET_IDX_COUPLE(i)];
-	}
-//	m_time.lastTxDayTime = 2607301900;//임시 2606071101
-	m_time.wakeUpDayTime = 2608100200;//임시
-	m_time.YY = 0;
-	m_time.MM = 0;
-	m_time.DD = 0;
-	m_time.hour = 0;
-	m_time.min = 0;
-	m_time.sec = 0;
 	m_ch[0].itemNum = 5;
+	m_ch[0].IP[0] = 192;
+	m_ch[0].IP[1] = 168;
+	Flash_init();
 
+	m_ch[0].transferMode = TXMODE_ALL_NUM;
 	workPlaceCode = 12345;
 	m_ch[0].disposDelTime = 6;
 	m_ch[0].protectDelTime = 6;
 
-	m_ch[0].transferMode = TXMODE_ALL_NUM;
-//	SD_GetLast_1_TDAH(&m_time.lastTxDayTime);
+	m_time.lastTxDayTime = SD_GetLast_1_TDAH();//YYMMDDhhmm
+	uint32_t nowDaySuc = REQ_RbryValeu(CMD_CTRL_TIME_REQ);//YYMMDDhhmm
+	REQ_RbryValeu(CMD_CTRL_GW_IP_REQ);
+	REQ_RbryValeu(CMD_CTRL_BOOT);
+	if(nowDaySuc && m_ch[0].cmd10En != FLAG_PUPG)
+	{
+		if(m_time.lastTxDayTime)
+		{
+			if(m_time.wakeUpDayTime >= m_time.lastTxDayTime)
+			{
+				TOFH_2_Start(0,m_time.lastTxDayTime, m_time.wakeUpDayTime);
+			}
+			else Debug_printf(">TimeErr sDay: %u > eDay: %u\r\n", m_time.lastTxDayTime, m_time.wakeUpDayTime);
+		}
+	}
+	else
+	{
+		//시작부터 시간값도 없이시작. 재부팅하던가 부저를 울리던가 노답상황
+	}
 
-//	TOFH_2_Start(0,m_time.lastTxDayTime, m_time.wakeUpDayTime);
-	Flash_init();
 
 }
 void Gateway_Config()
@@ -3338,7 +3586,8 @@ void Gateway_Config()
 
 void Testfunction()
 {
-	Gateway_Config();
+	YYMMDDhhmm_Cal();
+	SD_Test();
 }
 
 void Uart_Simple_Rx_Passing(UART_T* uart, uint8_t rxData)
@@ -3551,7 +3800,7 @@ void Debug_Print_Value(uint8_t idx, int value, int magin)
 }
 
 
-void Uart2_Passing_Pop(int cmd, int data)
+void User_Setting_Passing_Pop(int cmd, int data)
 {
 	uint8_t facCodeAddr;
 	char facCodeBuff[5] ={'0','E', 'P', 'F'};
@@ -3660,7 +3909,7 @@ void Uart2_Passing_Pop(int cmd, int data)
 		break;
 
 		case CMD_READ_ITEM:
-			for(int i =0 ;i < ITEM_MAX_NUM;i++)
+			for(int i =0 ;i < m_ch[0].itemNum;i++)
 			{
 				 facCode = m_ch[0].item[i].facCode;
 				 facC = GET_FAC_C(facCode);
@@ -3691,6 +3940,19 @@ void Uart2_Passing_Pop(int cmd, int data)
 			}
 		break;
 
+		case CMD_SET_IP_3:
+			m_ch[0].IP[2] = data;
+			Debug_printf("Server IP 192.168.%d.%d \r\n",m_ch[0].IP[2],m_ch[0].IP[3]);
+			Flash_Write_Word(FLASH_IDX_IP_OLD_2, data);
+		break;
+
+		case CMD_SET_IP_4:
+			m_ch[0].IP[3] = data;
+			Debug_printf("Server IP 192.168.%d.%d \r\n",m_ch[0].IP[2],m_ch[0].IP[3]);
+			Flash_Write_Word(FLASH_IDX_IP_OLD_3, data);
+		break;
+
+
 
 
 
@@ -3710,7 +3972,7 @@ void UartRx2DataProcess()
 		{
 			cmd = m_uart2.rxRingBuff[i][IDX_RX_CMD];
 			data = m_uart2.rxRingBuff[i][IDX_RX_DATA];
-			Uart2_Passing_Pop(cmd, data);
+			User_Setting_Passing_Pop(cmd, data);
 			Uart_Clear_Rx(&m_uart2, i);
 		}
 	}

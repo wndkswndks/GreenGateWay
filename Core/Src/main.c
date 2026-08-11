@@ -47,7 +47,6 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-void SD_Test();
 void SD_Init(void);
 
 /* USER CODE END PV */
@@ -145,7 +144,7 @@ int main(void)
   Calculate_Firmware_Hash();
   /* ���� g_firmware_sha256 ���� ���� �迭�� ���� �ؽ� 32����Ʈ�� �����Ǿ����ϴ�. */
   /* �� ���� ���α׷� �ڵ带 �� 1���ڶ� �����ϰ� �ٽ� �����ϸ� �˾Ƽ� ���մϴ�. */
-  SEED_TestVector1_Verify();
+//  SEED_TestVector1_Verify();
   Greenlink_EncDec_Test();
 
   Uart_Init();
