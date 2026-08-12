@@ -22,6 +22,7 @@
 #include "stm32f1xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "common.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -202,6 +203,7 @@ void SysTick_Handler(void)
     FatFsCnt = 0;
     SDTimer_Handler();
   }
+  YYMMDDhhmm_Cal();
 
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();

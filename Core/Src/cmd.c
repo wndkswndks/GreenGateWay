@@ -255,6 +255,8 @@ void Flash_init()
 		m_ch[0].item[i].rangeMax = (float)flashBuff[FLASH_GET_IDX_MAX(i)];
 		m_ch[0].item[i].rangeStandard = (float)flashBuff[FLASH_GET_IDX_STAND(i)];
 	}
+//	m_ch[0].IP[2] = flashBuff[FLASH_IDX_IP_OLD_2];
+//	m_ch[0].IP[3] = flashBuff[FLASH_IDX_IP_OLD_3];
 
 //	for(int i =0 ;i < FLASH_SIZE_WORDS;i++)
 //	{
@@ -1210,7 +1212,6 @@ void TDDH_3_Start(uint8_t ch)
 void TFDH_4_Start(uint8_t ch)
 {
 	if(m_Gcmd.txUse)return;
-
 	if (m_ch[ch].noTxTime == 9999)
 	{
 		if(m_ch[0].cmd4Tx9999Flag)
@@ -1780,10 +1781,10 @@ void Test_Config()
 
 	m_time.YY = 26;
 	m_time.MM = 8;
-	m_time.DD = 9;
+	m_time.DD = 12;
 
-	m_time.hour = 9;
-	m_time.min = 0;
+	m_time.hour = 6;
+	m_time.min = 18;
 	m_time.sec = 0;
 
 }
@@ -2090,11 +2091,13 @@ uint32_t MM_End_Day(uint8_t YY, uint8_t MM)
 
 void YYMMDDhhmm_Cal()
 {
-	static uint32_t timeStamp;
+	static uint32_t timeCnt;
+	timeCnt++;
+//	if(!m_Gcmd.initRasComplete)return;
 
-	if(HAL_GetTick()-timeStamp >= 1000)
+	if(timeCnt >= 1000)
 	{
-		timeStamp = HAL_GetTick();
+		timeCnt = 0;
 		m_time.sec++;
 		if(m_time.sec%5==0)m_time.secChange1 = 1;
 		if(m_time.sec==60)
@@ -2233,36 +2236,106 @@ uint8_t Chk_YYMMDDhhmm(uint32_t YYMMDDhhmm)
 	if(mm <= 59) ok += 1;
 	if(ok==5)
 	{
-
 		return 1;
 	}
 
 	return 0;
 
 }
-uint32_t REQ_RbryValeu(uint8_t* cmd)
-{
-	char buff[20] = {0,};
-	memcpy(buff, cmd, strlen(cmd));
-	uint32_t status = 0;
-	for(int i =0 ;i < 3;i++)
-	{
-		Debug_printf("Cmd REQ %s \r\n",cmd);
-		HAL_UART_Transmit(&huart1, (uint8_t*)buff, strlen(buff), 100);
-		HAL_Delay(700);
-		status = Rx_Init_Passing();
 
-		if(status)
-		{
-			return 1;
-		}
+void Rsbery_Time_Passing(uint8_t* str)
+{
+	uint32_t YYMMDDhhmm = (uint32_t)strtoul((char*)str, NULL, 10);
+	uint32_t hhmm;
+	Debug_printf("> dayTime : %u \r\n", YYMMDDhhmm);
+
+	if(Chk_YYMMDDhhmm(YYMMDDhhmm))
+	{
+		m_time.wakeUpDayTime = YYMMDDhhmm;
+		m_time.YY = DAY_YY(YYMMDDhhmm);
+		m_time.MM = DAY_MM(YYMMDDhhmm);
+		m_time.DD = DAY_DD(YYMMDDhhmm);
+		hhmm = YYMMDDhhmm%10000;
+		m_time.hour = hhmm/100;
+		m_time.min = hhmm%100;
+		m_time.sec = 0;
+		Debug_printf("Now DayTime : %u\r\n", YYMMDDhhmm);
+		m_Gcmd.timeGet = 1;
 	}
-	Debug_printf("> Fail Rsp Time\r\n");
-	return 0;
+	else Debug_printf("Fail Now DayTime : %u\r\n", YYMMDDhhmm);
 }
 
 
-void Tx_To_RasPi(uint8_t num, char*str)
+void Rsbery_GwIp_Passing(uint8_t* str)
+{
+	//Save gw ip
+	//[<gwip,192.168.xxx.xxx>]
+	int xxx = 0, yyy = 0;
+	int parsed = sscanf((char*)str, "[<gwip,192.168.%3d.%3d>]", &xxx, &yyy);
+
+	if (parsed == 2 && (xxx >= 0 && xxx <= 255) && (yyy >= 0 && yyy <= 255))
+	{
+		m_ch[0].GWip[2] = xxx;
+		m_ch[0].GWip[3] = yyy;
+		Debug_printf("192.168.%d.%d\r\n", xxx, yyy);
+		m_Gcmd.gwIpGet = 1;
+	}
+	else Debug_printf("Fail xxx: %d yyy: %d\r\n", xxx, yyy);
+
+}
+
+void Rsbery_SurverIp_Tx()
+{
+	int len;
+	uint8_t buff[40] = {0,};
+	m_ch[0].IP[2] = 219;
+	m_ch[0].IP[3] = 113;
+	len = sprintf(buff,"[<svrip,192.168.%d.%d>]",m_ch[0].IP[2], m_ch[0].IP[3]);
+	HAL_UART_Transmit(&huart1, (uint8_t*)buff, strlen(buff), 100);
+	m_Gcmd.svrIpSet = 1;
+}
+
+void Rsbery_PUPG_Secsece()
+{
+	m_ch[0].IP[2] = flashBuff[FLASH_IDX_IP_NEW_2];
+	m_ch[0].IP[3] = flashBuff[FLASH_IDX_IP_NEW_3];
+	Flash_Write_Word(FLASH_IDX_IP_OLD_2, m_ch[0].IP[2]);
+	Flash_Write_Word(FLASH_IDX_IP_OLD_3, m_ch[0].IP[3]);
+	m_ch[0].cmd10En = FLAG_PUPG;
+	m_Gcmd.txCmd = ID_PUPG_10;
+	Debug_printf("Succese PUPG \r\n");
+	m_Gcmd.bootGet = 1;
+
+}
+void Rsbery_PUPG_Fail(uint8_t status)
+{
+	//Old ip TUPG
+	m_ch[0].IP[2] = flashBuff[FLASH_IDX_IP_OLD_2];
+	m_ch[0].IP[3] = flashBuff[FLASH_IDX_IP_OLD_3];
+	m_ch[0].cmd10En = FLAG_PUPG;
+	m_Gcmd.txCmd = ID_PUPG_10;
+	m_Gcmd.bootGet = 1;
+	switch (status)
+	{
+		case PUPG_ABORT:
+			Debug_printf("Fail PUPG ABORT\r\n");
+		break;
+
+		case PUPG_DOWNFAIL:
+			Debug_printf("Fail PUPG DOWNFAIL\r\n");
+		break;
+
+		case PUPG_FLASHFALE:
+			Debug_printf("Fail PUPG FLASHFALE\r\n");
+		break;
+	}
+
+}
+
+
+
+
+void Rsbery_Tx_PUPG(uint8_t num, char*str)
 {
 	char buff[60] = {0,};
 	int len;
@@ -2272,6 +2345,80 @@ void Tx_To_RasPi(uint8_t num, char*str)
 	HAL_Delay(50);
 }
 
+void Rsbery_Tx_CMD(char*str)
+{
+	char buff[60] = {0,};
+	int len;
+
+	len = snprintf(buff, sizeof(buff), "[<%s>]", str);
+	HAL_UART_Transmit(&huart1, (uint8_t*)buff, len, 100);
+	HAL_Delay(50);
+}
+uint8_t Rsbery_REQ_Config()
+{
+	static uint8_t step = STEP0;
+	static uint32_t timeStamp,timeGap = 100;
+	static uint8_t txCnt;
+
+	if(HAL_GetTick()-timeStamp >= timeGap)
+	{
+		timeStamp = HAL_GetTick();
+		switch (step)
+		{
+			case STEP0:
+				if(!m_Gcmd.timeGet)
+				{
+					txCnt++;
+					if(txCnt >= 3){txCnt = 0; step = STEP1;}
+					else Rsbery_Tx_CMD(CMD_CTRL_TIME_REQ);
+				}
+				else{txCnt = 0; step = STEP1; }
+			break;
+
+			case STEP1:
+				if(!m_Gcmd.gwIpGet)
+				{
+					txCnt++;
+					if(txCnt >= 3){txCnt = 0; step = STEP2;  timeGap = 700;}
+					else Rsbery_Tx_CMD(CMD_CTRL_GW_IP_REQ);
+				}
+				else{txCnt = 0; step = STEP2; timeGap = 700;}
+			break;
+
+			case STEP2:
+				if(!m_Gcmd.bootGet)
+				{
+					txCnt++;
+					if(txCnt >= 3) {txCnt = 0; step = STEP3; timeGap = 100;}
+					else Rsbery_Tx_CMD(CMD_CTRL_BOOT);
+				}
+				else
+				{
+					m_Gcmd.initRasComplete = 1;
+					return 1;
+				}
+			break;
+
+			case STEP3:
+				if(!m_Gcmd.bootGet && m_Gcmd.timeGet)
+				{
+					m_time.lastTxDayTime = SD_GetLast_1_TDAH();//YYMMDDhhmm
+					if(m_time.lastTxDayTime && m_time.wakeUpDayTime)
+					{
+						if(m_time.wakeUpDayTime > m_time.lastTxDayTime+5)
+						{
+							TOFH_2_Start(0,m_time.lastTxDayTime, m_time.wakeUpDayTime);
+						}
+						else Debug_printf(">TimeErr sDay: %u > eDay: %u\r\n", m_time.lastTxDayTime, m_time.wakeUpDayTime);
+					}
+					m_Gcmd.initRasComplete = 1;
+					return 1;
+				}
+			break;
+		}
+	}
+	return 0;
+}
 void DisposProtec_Config()
 {
 	for(int i =0 ;i < m_ch[0].itemNum;i++)
@@ -2325,7 +2472,6 @@ void Five_Sec_GetData()
 {
 	uint8_t cnt = m_ch[0].status5SecCnt;
 	uint8_t valueXXX[5] = {0,};// 원래 항상 저장되야함
-
 	if(m_time.secChange1 && (m_time.sec%5 == 0))
 	{
 		m_time.secChange1 = 0;
@@ -2632,6 +2778,12 @@ void Thirty_Min_GetData()
 
 
 }
+
+
+
+
+
+
 void Rx_Passing_5_PDUH()
 {
 
@@ -2835,15 +2987,15 @@ void Rx_Passing_10_PUPG()
         Debug_printf("%hhu.%hhu.%hhu.%hhu \r\n",tempIpBuff[0], tempIpBuff[1], tempIpBuff[2], tempIpBuff[3]);
         TX_ACK(ID_PUPG_10);
 
-		Tx_To_RasPi(PUPG_F_HOST, m_ch[ch].FTPipDomain);
-		Tx_To_RasPi(PUPG_F_PORT, m_ch[ch].FTPport);
-		Tx_To_RasPi(PUPG_F_PATH, m_ch[ch].road);
-		Tx_To_RasPi(PUPG_F_USER, m_ch[ch].FTPid);
-		Tx_To_RasPi(PUPG_F_PWD, m_ch[ch].FTPpwd );
-		Tx_To_RasPi(PUPG_F_FTP_TYPE, &m_ch[ch].FTPtype);
-		Tx_To_RasPi(PUPG_F_NEW_IP, (char*)m_ch[ch].IP);
-		Tx_To_RasPi(PUPG_F_PRE_TUPG, "tupg all");
-		Tx_To_RasPi(PUPG_F_START, "start");
+		Rsbery_Tx_PUPG(PUPG_F_HOST, m_ch[ch].FTPipDomain);
+		Rsbery_Tx_PUPG(PUPG_F_PORT, m_ch[ch].FTPport);
+		Rsbery_Tx_PUPG(PUPG_F_PATH, m_ch[ch].road);
+		Rsbery_Tx_PUPG(PUPG_F_USER, m_ch[ch].FTPid);
+		Rsbery_Tx_PUPG(PUPG_F_PWD, m_ch[ch].FTPpwd );
+		Rsbery_Tx_PUPG(PUPG_F_FTP_TYPE, &m_ch[ch].FTPtype);
+		Rsbery_Tx_PUPG(PUPG_F_NEW_IP, (char*)m_ch[ch].IP);
+		Rsbery_Tx_PUPG(PUPG_F_PRE_TUPG, "tupg all");
+		Rsbery_Tx_PUPG(PUPG_F_START, "start");
 
     }
     else
@@ -3337,10 +3489,15 @@ void Rx_Gateway_Config()//
         else if(CHK_RX_CMD(CMD_PODT) == 0){Rx_Passing_19_PODT();}
         else if(CHK_RX_CMD(CMD_PCN2) == 0){Rx_Passing_20_PCN2();}
         else if(CHK_RX_CMD(CMD_PRBT) == 0){Rx_Passing_22_PRBT();}
-		else if(CHK_RX_CTRL_CMD(CMD_CTRL_SVR_IP, 9) == 0)
-		{
+		else if(CHK_RX_CTRL_CMD(CMD_CTRL_SVR_IP, 9) == 0){Rsbery_SurverIp_Tx();}
+		else if(CHK_RX_CTRL_CMD(CMD_CTRL_TIME_RX, 7) == 0){Rsbery_Time_Passing(m_Gcmd.passingBuff + 7);}
+        else if(CHK_RX_CTRL_CMD(CMD_CTRL_GW_IP_RX, 17) == 0){Rsbery_GwIp_Passing(m_Gcmd.passingBuff);}
+        else if(CHK_RX_CTRL_CMD(CMD_CTRL_TUPG, 8) == 0){Rsbery_PUPG_Secsece();}
+        else if(CHK_RX_CTRL_CMD(CMD_CTRL_ABORT, 8) == 0){Rsbery_PUPG_Fail(PUPG_ABORT);}
+		else if(CHK_RX_CTRL_CMD(CMD_CTRL_DOWNFAIL, 12) == 0){Rsbery_PUPG_Fail(PUPG_DOWNFAIL);}
+		else if(CHK_RX_CTRL_CMD(CMD_CTRL_FLASHFALE, 13) == 0){Rsbery_PUPG_Fail(PUPG_FLASHFALE);}
 
-		}
+
 
 
         else if(m_Gcmd.passingBuff[0] == MSG_ACK && m_Gcmd.passingCnt == 1)Rx_Passing_ACK();
@@ -3354,117 +3511,6 @@ void Rx_Gateway_Config()//
 	m_Gcmd.rxCnt = 0;
 }
 
-
-
-uint32_t Rx_Init_Passing()
-{
-	uint32_t returnData = 0;
-	if(HAL_GetTick() - m_Gcmd.rxTimeStamp>30 && m_Gcmd.rxTimeStamp)
-	{
-		memcpy(m_Gcmd.passingBuff, m_Gcmd.rxBuff, m_Gcmd.rxCnt);
-		memset(m_Gcmd.rxBuff, 0, sizeof(m_Gcmd.rxBuff));
-		m_Gcmd.rxCnt = 0;
-		m_Gcmd.passingCnt = m_Gcmd.rxCnt;
-
-		//：[<time,2608081330>]
-        if(CHK_RX_CTRL_CMD(CMD_CTRL_TIME_RX, 7) == 0)
-        {
-			uint32_t YYMMDDhhmm = (uint32_t)strtoul((char*)m_Gcmd.passingBuff + 7, NULL, 10);
-			uint32_t hhmm;
-			Debug_printf("> dayTime : %u \r\n", YYMMDDhhmm);
-
-			if(Chk_YYMMDDhhmm(YYMMDDhhmm))
-			{
-				m_time.wakeUpDayTime = YYMMDDhhmm;
-				m_time.YY = DAY_YY(YYMMDDhhmm);
-				m_time.MM = DAY_MM(YYMMDDhhmm);
-				m_time.DD = DAY_DD(YYMMDDhhmm);
-				hhmm = YYMMDDhhmm%10000;
-				m_time.hour = hhmm/100;
-				m_time.min = hhmm%100;
-				m_time.sec = 0;
-				Debug_printf("Now DayTime : %u\r\n", YYMMDDhhmm);
-				returnData = 1;
-			}
-        }
-        else if(CHK_RX_CTRL_CMD(CMD_CTRL_GW_IP_RX, 17) == 0)
-        {
-			//Save gw ip
-			//[<gwip,192.168.xxx.xxx>]
-			int xxx = 0, yyy = 0;
-		    int parsed = sscanf((char*)m_Gcmd.passingBuff, "[<gwip,192.168.%3d.%3d>]", &xxx, &yyy);
-
-		    if (parsed == 2 && (xxx >= 0 && xxx <= 255) && (yyy >= 0 && yyy <= 255))
-		    {
-				m_ch[0].GWip[2] = xxx;
-				m_ch[0].GWip[3] = yyy;
-				Debug_printf("192.168.%d.%d\r\n", xxx, yyy);
-				returnData = 1;
-		    }
-
-        }
-        else if(CHK_RX_CTRL_CMD(CMD_CTRL_TUPG, 8) == 0)
-        {
-			//New ip TUPG
-			m_ch[0].IP[2] = flashBuff[FLASH_IDX_IP_NEW_2];
-			m_ch[0].IP[3] = flashBuff[FLASH_IDX_IP_NEW_3];
-			Flash_Write_Word(FLASH_IDX_IP_OLD_2, m_ch[0].IP[2]);
-			Flash_Write_Word(FLASH_IDX_IP_OLD_3, m_ch[0].IP[3]);
-			m_ch[0].cmd10En = FLAG_PUPG;
-			m_Gcmd.txCmd = ID_TDAH_1;
-			Debug_printf("Succese TUPG \r\n");
-			returnData = 1;
-        }
-        else if(CHK_RX_CTRL_CMD(CMD_CTRL_ABORT, 8) == 0)
-        {
-			//Old ip TUPG
-			m_ch[0].IP[2] = flashBuff[FLASH_IDX_IP_OLD_2];
-			m_ch[0].IP[3] = flashBuff[FLASH_IDX_IP_OLD_3];
-			m_ch[0].cmd10En = FLAG_PUPG;
-			m_Gcmd.txCmd = ID_TDAH_1;
-			Debug_printf("Fail TUPG ABORT\r\n");
-			returnData = 1;
-        }
-		else if(CHK_RX_CTRL_CMD(CMD_CTRL_DOWNFAIL, 12) == 0)
-		{
-			//Old ip TUPG
-			m_ch[0].IP[2] = flashBuff[FLASH_IDX_IP_OLD_2];
-			m_ch[0].IP[3] = flashBuff[FLASH_IDX_IP_OLD_3];
-			m_ch[0].cmd10En = FLAG_PUPG;
-			m_Gcmd.txCmd = ID_TDAH_1;
-			Debug_printf("Fail TUPG DOWNFAIL\r\n");
-			returnData = 1;
-		}
-		else if(CHK_RX_CTRL_CMD(CMD_CTRL_FLASHFALE, 13) == 0)
-		{
-			//Old ip TUPG
-			m_ch[0].IP[2] = flashBuff[FLASH_IDX_IP_OLD_2];
-			m_ch[0].IP[3] = flashBuff[FLASH_IDX_IP_OLD_3];
-			m_ch[0].cmd10En = FLAG_PUPG;
-			m_Gcmd.txCmd = ID_TDAH_1;
-			Debug_printf("Fail TUPG FLASHFALE\r\n");
-			returnData = 1;
-		}
-		else Debug_printf("NO good init msg\r\n");
-
-
-        memset(m_Gcmd.passingBuff, 0, sizeof(m_Gcmd.passingBuff));
-        m_Gcmd.passingCnt = 0;
-		m_Gcmd.rxTimeStamp = 0;
-
-		return returnData;
-	}
-	else
-	{
-		memset(m_Gcmd.passingBuff, 0, sizeof(m_Gcmd.passingBuff));
-        m_Gcmd.passingCnt = 0;
-		m_Gcmd.rxTimeStamp = 0;
-
-		Debug_printf("> no Rsp Time\r\n");
-		return 0;
-	}
-
-}
 
 void Tx_Gateway_Config(uint8_t ch)
 {
@@ -3536,57 +3582,60 @@ void Gateway_Init()
 	m_ch[0].itemNum = 5;
 	m_ch[0].IP[0] = 192;
 	m_ch[0].IP[1] = 168;
-	Flash_init();
-
 	m_ch[0].transferMode = TXMODE_ALL_NUM;
 	workPlaceCode = 12345;
 	m_ch[0].disposDelTime = 6;
 	m_ch[0].protectDelTime = 6;
 
-	m_time.lastTxDayTime = SD_GetLast_1_TDAH();//YYMMDDhhmm
-	uint32_t nowDaySuc = REQ_RbryValeu(CMD_CTRL_TIME_REQ);//YYMMDDhhmm
-	REQ_RbryValeu(CMD_CTRL_GW_IP_REQ);
-	REQ_RbryValeu(CMD_CTRL_BOOT);
-	if(nowDaySuc && m_ch[0].cmd10En != FLAG_PUPG)
+//	Flash_init();
+
+	uint32_t timeStamp;
+	uint8_t done = 0;
+
+	Debug_printf(">init Passing Start\r\n");
+	timeStamp = HAL_GetTick();
+	while ((HAL_GetTick()-timeStamp < 10000) && (done  == 0))
 	{
-		if(m_time.lastTxDayTime)
-		{
-			if(m_time.wakeUpDayTime >= m_time.lastTxDayTime)
-			{
-				TOFH_2_Start(0,m_time.lastTxDayTime, m_time.wakeUpDayTime);
-			}
-			else Debug_printf(">TimeErr sDay: %u > eDay: %u\r\n", m_time.lastTxDayTime, m_time.wakeUpDayTime);
-		}
-	}
-	else
-	{
-		//시작부터 시간값도 없이시작. 재부팅하던가 부저를 울리던가 노답상황
+		done = Rsbery_REQ_Config();
+		Rx_Gateway_Config();
 	}
 
+	if(m_Gcmd.timeGet) Debug_printf(">timeGet OK\r\n");
+	else Debug_printf(">timeGet Fail\r\n");
+
+	if(m_Gcmd.gwIpGet) Debug_printf(">gwIpGet OK\r\n");
+	else Debug_printf(">gwIpGet Fail\r\n");
+
+	if(m_Gcmd.bootGet) Debug_printf(">bootGet OK\r\n");
+	else Debug_printf(">bootGet Not\r\n");
+
+	Debug_printf("> m_Gcmd.txCmd = %hhu\r\n",m_Gcmd.txCmd);
 
 }
 void Gateway_Config()
 {
 
-	YYMMDDhhmm_Cal();
-
 
 	Five_Sec_GetData();
+
 	TDDH_3_Start(0);
 	TFDH_4_Start(0);
 
 	ACK_ReSend();
 	TxMsg_ReSend();
 
+
 	Rx_Gateway_Config();
 	Tx_Gateway_Config(0);
 
 	Flash_Write_All_Word();
+
+
 }
 
 void Testfunction()
 {
-	YYMMDDhhmm_Cal();
+
 	SD_Test();
 }
 

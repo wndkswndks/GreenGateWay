@@ -25,6 +25,7 @@ void TxAllBuff_Set(uint8_t* msg, uint16_t len);
 uint16_t Get_YYMMDD(void);   // 실제 반환 타입에 맞게 수정
 uint16_t Get_hhmm(void);
 void append_crc16(uint8_t *buff, uint16_t idx);
+uint8_t Chk_YYMMDDhhmm(uint32_t YYMMDDhhmm);
 
 /* SPI Chip Select */
 static void SELECT(void)
@@ -773,24 +774,30 @@ void SD_Write_Addr(const char* filename, const uint8_t* data, uint16_t len)
 
 
 typedef struct {
-  uint8_t startFlag[2];
-  uint16_t hhmm;     // 0~2359 형태로 시:분 (날짜는 파일명으로 분리, 아래 설명)
-  uint16_t len;      // 이 레코드의 데이터 길이
-  // 그 다음에 실제 데이터(len바이트)가 이어짐
+  uint8_t startFlag[2]; // ">>"
+  char hhmm[4];         // '0', '9', '0', '0' 형태의 아스키 문자열 (4byte)
+  uint16_t len;         // 데이터 길이 (2byte)
 } RecordHeader;
-
 
 void SD_Write_Record(char* dirName, uint32_t yymmdd, uint16_t hhmm, const uint8_t* data, uint16_t len)
 {
-  char filename[24];   // "TNOH/261231.txt" 등 여유있게
-
-
-
-  sprintf(filename, "%s/%lu.txt", dirName, yymmdd);   // "TNOH/260621.txt"
+  char filename[24];
+  sprintf(filename, "%s/%lu.txt", dirName, yymmdd);
 
   uint32_t pos;
   UINT bw;
-  RecordHeader hdr = { {'>', '>'}, hhmm, len };
+
+  // 1. 헤더 기본 구조 생성
+  RecordHeader hdr;
+  hdr.startFlag[0] = '>';
+  hdr.startFlag[1] = '>';
+  hdr.len = len;
+
+  // 2. 숫자 hhmm을 4자리 아스키 문자열로 변환 (예: 900 -> "0900")
+  // snprintf를 사용하면 null 문자가 뒤에 붙으므로 4바이트만 지정하여 덮어씁니다.
+  char hhmmStr[5];
+  snprintf(hhmmStr, sizeof(hhmmStr), "%04u", hhmm);
+  memcpy(hdr.hhmm, hhmmStr, 4);
 
   if(SD_Error_Chk(f_open(&fil, filename, FA_OPEN_ALWAYS | FA_WRITE), "f_open"))
     return;
@@ -802,82 +809,40 @@ void SD_Write_Record(char* dirName, uint32_t yymmdd, uint16_t hhmm, const uint8_
     return;
   }
 
-  if(SD_Error_Chk(f_write(&fil, &hdr, sizeof(hdr), &bw), "f_write(hdr)")) // ① 헤더 먼저 씀
+  // ① 헤더 쓰기
+  if(SD_Error_Chk(f_write(&fil, &hdr, sizeof(hdr), &bw), "f_write(hdr)"))
   {
-  	  f_lseek(&fil, pos);
-	  f_truncate(&fil);
-	  f_close(&fil);
-	  return;
+    f_lseek(&fil, pos);
+    f_truncate(&fil);
+    f_close(&fil);
+    return;
   }
 
   if(bw < sizeof(hdr))
   {
-	printf("Header write incomplete! requested %u, written %u\r\n", (unsigned)sizeof(hdr), bw);
-	f_lseek(&fil, pos);
-	f_truncate(&fil);
-	f_close(&fil);
-	return;
+    printf("Header write incomplete! requested %u, written %u\r\n", (unsigned)sizeof(hdr), bw);
+    f_lseek(&fil, pos);
+    f_truncate(&fil);
+    f_close(&fil);
+    return;
   }
 
+  // ② 데이터 쓰기
   if(SD_Error_Chk(f_write(&fil, data, len, &bw), "f_write(data)"))
   {
-  	 f_lseek(&fil, pos);
-	 f_truncate(&fil);
-	 f_close(&fil);
-	 return;
+    f_lseek(&fil, pos);
+    f_truncate(&fil);
+    f_close(&fil);
+    return;
   }
+
   if(bw < len)
   {
-	printf("Data write incomplete! requested %u, written %u\r\n", len, bw);
-	/* return 없음 ? 의도적으로 계속 진행해서 f_close()까지 도달 */
-	f_lseek(&fil, pos);
-	f_truncate(&fil);
-	f_close(&fil);
-	return;
-  }
-
-  SD_Error_Chk(f_close(&fil), "f_close");
-}
-
-void SD_Read_Range(const char* dirName, uint32_t yymmdd,  uint16_t startHHMM, uint16_t endHHMM)
-{
-  RecordHeader hdr;
-  UINT br;
-  uint8_t buf[300];   // 최대 길이만큼 버퍼 (운영 시 적절히 조정)
-  char filename[24];
-  sprintf(filename, "%s/%lu.txt", dirName, yymmdd);   // "TNOH/260621.txt"
-
-  if(SD_Error_Chk(f_open(&fil, filename, FA_READ), "f_open"))
+    printf("Data write incomplete! requested %u, written %u\r\n", len, bw);
+    f_lseek(&fil, pos);
+    f_truncate(&fil);
+    f_close(&fil);
     return;
-
-  while(1)
-  {
-    FRESULT res = f_read(&fil, &hdr, sizeof(hdr), &br);
-    if(res != FR_OK || br < sizeof(hdr))
-      break;   // 더 읽을 헤더 없음 (파일 끝)
-
-    if(hdr.hhmm >= startHHMM && hdr.hhmm <= endHHMM)
-    {
-      // ★ 범위 안 ? 데이터 실제로 읽음
-      if(SD_Error_Chk(f_read(&fil, buf, hdr.len, &br), "f_read"))
-	  {
-		f_close(&fil);
-		return;
-	  }
-	  if(br < hdr.len) printf("Warning: header says %u bytes but only %u read (corrupted?)\r\n", hdr.len, br);
-
-	  printf("%s [%04u] %u bytes: %.*s\r\n",dirName, hdr.hhmm, br, br, buf);
-      // 여기서 서버 송신용 버퍼에 누적하거나 즉시 전송
-    }
-    else
-    {
-      // ★ 범위 밖 ? 데이터는 읽지 않고 그냥 건너뛰기 (포인터만 이동)
-      if(SD_Error_Chk(f_lseek(&fil, f_tell(&fil) + hdr.len), "f_lseek"))
-      {
-	    f_close(&fil);
-	    return;
-	  }
-    }
   }
 
   SD_Error_Chk(f_close(&fil), "f_close");
@@ -897,7 +862,7 @@ uint8_t SD_Read_Step_TxMsg(const char* dirName, uint32_t YYMMDD)
 
   sprintf(filename, "%s/%lu.txt", dirName, YYMMDD);
 
-  if (SD_Error_Chk(f_open(&fil, filename, FA_READ),"f_open"))
+  if (SD_Error_Chk(f_open(&fil, filename, FA_READ), "f_open"))
   {
     g_NextReadPos = 0;
     return SD_ERR_NEXT_FILE;
@@ -930,7 +895,7 @@ uint8_t SD_Read_Step_TxMsg(const char* dirName, uint32_t YYMMDD)
     uint8_t prev_c = 0;
     uint8_t sync_found = 0;
     uint32_t scan_count = 0;
-    const uint32_t MAX_SCAN = 4096;   // ★ 개선: 최대 스캔 바이트 제한 (장시간 블로킹 방지)
+    const uint32_t MAX_SCAN = 4096;   // 최대 스캔 바이트 제한
 
     // 잘못 읽은 헤더 위치 + 1부터 1바이트씩 정밀 스캔
     f_lseek(&fil, g_NextReadPos + 1);
@@ -946,7 +911,6 @@ uint8_t SD_Read_Step_TxMsg(const char* dirName, uint32_t YYMMDD)
       }
       prev_c = c;
 
-      // ★ 개선: 스캔 길이 제한
       if (++scan_count >= MAX_SCAN)
       {
         printf("Scan limit (%lu bytes) reached. Stopping recovery.\r\n", MAX_SCAN);
@@ -979,20 +943,18 @@ uint8_t SD_Read_Step_TxMsg(const char* dirName, uint32_t YYMMDD)
            hdr.len, (unsigned)sizeof(readSDbuff));
 
     // 잘못된 len도 동기화 깨짐으로 간주
-    // 헤더 크기만큼만 전진 → 다음 호출에서 복구 스캔을 타게 유도
     g_NextReadPos += sizeof(hdr);
     f_close(&fil);
     return SD_ERR_RETRY;
   }
 
-  // ★ 개선: 데이터 완전 읽기 검사
+  // 데이터 완전 읽기 검사
   res = f_read(&fil, readSDbuff, hdr.len, &br);
   if (res != FR_OK || br != hdr.len)
   {
     printf("Data read error or incomplete: expected %u, got %u\r\n", hdr.len, br);
-	// (수정된 코드: 깨진 데이터는 무시하고 복구 스캔 유도)
-	g_NextReadPos += sizeof(hdr); // 방금 읽은 헤더 크기만큼만 전진
-	f_close(&fil);
+    g_NextReadPos += sizeof(hdr);
+    f_close(&fil);
 
     return SD_ERR_RETRY;
   }
@@ -1001,11 +963,15 @@ uint8_t SD_Read_Step_TxMsg(const char* dirName, uint32_t YYMMDD)
   uint32_t currentPos = f_tell(&fil);
   uint32_t fileSize   = f_size(&fil);
 
-  Tx_DayTimeSave(YYMMDD, hdr.hhmm);
+  // ★ [핵심 변경] 아스키 문자 배열(4바이트) -> uint16_t 숫자(hhmm) 변환
+  uint16_t parsed_hhmm = (hdr.hhmm[0] - '0') * 1000 +
+                         (hdr.hhmm[1] - '0') * 100 +
+                         (hdr.hhmm[2] - '0') * 10 +
+                         (hdr.hhmm[3] - '0');
+
+  Tx_DayTimeSave(YYMMDD, parsed_hhmm);
 
   // 프로토콜상 필요에 따라 앞 4바이트를 dirName으로 교체
-  // (dirName이 최소 4바이트라고 가정. 필요 시 strlen 체크 추가 가능)
-
   memcpy(readSDbuff, (uint8_t*)dirName, 4);
 
   uint16_t crcidx = hdr.len - 2;
@@ -1060,7 +1026,7 @@ void SD_Delete_Record(const char* dirName, uint32_t YYMMDD, uint16_t hhmm)
             break;
         }
 
-        // ★ 수정: 하한선(2)과 상한선(1024) 동시 검사 (CRC 언더플로우 방지)
+        // 하한선(2)과 상한선(1300) 동시 검사 (CRC 언더플로우 및 버퍼 오버플로우 방지)
         if (hdr.len < 2 || hdr.len > 1300)
         {
             printf("Error: Invalid len(%u) detected. Aborting deletion.\r\n", hdr.len);
@@ -1068,9 +1034,15 @@ void SD_Delete_Record(const char* dirName, uint32_t YYMMDD, uint16_t hhmm)
         }
         // ==========================================================
 
-        if(hdr.hhmm == hhmm)
+        // ★ [핵심 변경] 아스키 문자 배열(4바이트) -> uint16_t 숫자 변환
+        uint16_t parsed_hhmm = (hdr.hhmm[0] - '0') * 1000 +
+                               (hdr.hhmm[1] - '0') * 100 +
+                               (hdr.hhmm[2] - '0') * 10 +
+                               (hdr.hhmm[3] - '0');
+
+        if(parsed_hhmm == hhmm)
         {
-            // 타겟을 찾음!
+            // 타겟을 찾음! (다음 레코드 위치 = 현재 헤더 위치 + 헤더 크기 + 데이터 길이)
             next_pos = target_pos + sizeof(hdr) + hdr.len;
             found = 1;
             break;
@@ -1096,18 +1068,17 @@ void SD_Delete_Record(const char* dirName, uint32_t YYMMDD, uint16_t hhmm)
             f_lseek(&fil, next_pos);
             FRESULT r_res = f_read(&fil, shift_buf, sizeof(shift_buf), &br);
 
-            // ★ 수정: 읽기 에러(r_res)도 함께 체크
             if(r_res != FR_OK || br == 0)
                 break;
 
             f_lseek(&fil, target_pos);
             FRESULT w_res = f_write(&fil, shift_buf, br, &bw);
 
-            // ★ 핵심 수정: 덮어쓰기 도중 에러(부분 쓰기) 발생 시 즉시 중단
+            // 덮어쓰기 도중 에러(부분 쓰기) 발생 시 즉시 중단
             if(w_res != FR_OK || bw != br)
             {
                 printf("Critical Error: Write failed during shift! Aborting.\r\n");
-                break; // 에러가 나면 더 이상 덮어쓰지 않고 빠져나감
+                break;
             }
 
             target_pos += bw;
@@ -1115,7 +1086,6 @@ void SD_Delete_Record(const char* dirName, uint32_t YYMMDD, uint16_t hhmm)
         }
 
         // 3. 파일의 끝을 잘라내기 (Truncate)
-        // 위에서 에러로 break를 탔더라도, 정상적으로 덮어쓴 곳까지만 자름
         f_lseek(&fil, target_pos);
         if(f_truncate(&fil) == FR_OK)
         {
@@ -1282,7 +1252,7 @@ typedef struct {
 // ── ② 특정 파일에서 마지막 레코드의 hhmm 뽑기 ──
 // 파일을 앞에서부터 순차 스캔, 마지막으로 온전히 읽힌 레코드의 hhmm을 기억
 // 반환: 1=마지막 hhmm 찾음(*outHHMM 채움), 0=유효 레코드 없음/에러
- uint8_t SD_GetLastHHMM(const char* dirName, uint32_t YYMMDD, uint16_t* outHHMM)
+uint8_t SD_GetLastHHMM(const char* dirName, uint32_t YYMMDD, uint16_t* outHHMM)
 {
     RecordHeader hdr;
     UINT br;
@@ -1301,30 +1271,38 @@ typedef struct {
         if(res != FR_OK || br < sizeof(hdr))
             break;   // 정상 EOF 또는 헤더 못 읽음 → 스캔 종료
 
-        // 손상 검증: startFlag 깨졌으면 여기까지가 신뢰 가능한 끝
+        // 1. 동기화 마크(startFlag) 검증
         if(hdr.startFlag[0] != '>' || hdr.startFlag[1] != '>')
         {
             printf("Sync lost at scan. Last valid hhmm=%04u\r\n", lastHHMM);
             break;
         }
-        if(hdr.len < 2 || hdr.len > 1300)   // ← MAX_RECORD_LEN 권장
+
+        // 2. 비정상 데이터 길이(len) 검증
+        if(hdr.len < 2 || hdr.len > 1300)
         {
             printf("Invalid len(%u) at scan. Stop.\r\n", hdr.len);
             break;
         }
 
-        // 여기까지 왔으면 이 헤더는 정상 → 후보 갱신
-        lastHHMM = hdr.hhmm;
+        // ★ [핵심 변경] 4바이트 아스키 문자열 -> uint16_t 정수 변환
+        uint16_t parsed_hhmm = (hdr.hhmm[0] - '0') * 1000 +
+                               (hdr.hhmm[1] - '0') * 100 +
+                               (hdr.hhmm[2] - '0') * 10 +
+                               (hdr.hhmm[3] - '0');
+
+        // 정상 헤더 확인 완료 -> 최신 hhmm 후보 갱신
+        lastHHMM = parsed_hhmm;
         found = 1;
 
-        // 데이터 실제로 있는지까지 확인하고 건너뜀 (반쪽 레코드 방어)
+        // 3. 실제 데이터 바이트만큼 건너뛰기 (f_tell 오프셋 이동)
         if(f_lseek(&fil, f_tell(&fil) + hdr.len) != FR_OK)
             break;
-        // ★ 파일 끝을 넘어 seek되면 = 데이터가 잘림 = 이 레코드는 불완전
+
+        // 파일 끝을 넘어 Seek되었는지 검사 (반쪽짜리/불완전 레코드 방어)
         if(f_tell(&fil) > f_size(&fil))
         {
-            printf("Last record truncated. hhmm=%04u may be incomplete\r\n", hdr.hhmm);
-            // 필요 시 여기서 found를 이전 값으로 되돌릴 수도 있음 (아래 설명)
+            printf("Last record truncated. hhmm=%04u may be incomplete\r\n", parsed_hhmm);
             break;
         }
     }
@@ -1333,6 +1311,7 @@ typedef struct {
     if(found) *outHHMM = lastHHMM;
     return found;
 }
+
 
 // ── 합쳐서 쓰는 진입점 ──
 // 부팅 시 호출: 해당 폴더의 마지막 쓴 날짜/시각을 out에 채움
@@ -1380,33 +1359,27 @@ uint8_t clrFlag;
 
 uint8_t timeStr[10][103] =
 {
-"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\r\n",
 "1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111\r\n",
-"2222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222\r\n",
-"3333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333\r\n",
-"4444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444\r\n",
-"5555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555\r\n",
-"6666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666\r\n",
-"7777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777\r\n",
-"8888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888\r\n",
+"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\r\n",
+"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\r\n",
+"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\r\n",
+"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\r\n",
+"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\r\n",
+"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\r\n",
+"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\r\n",
+"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\r\n",
 "9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\r\n"
 };
 
 void SD_Test()
 {
-	uint16_t hhmm = 900;
-	static uint32_t timeStamp;
 	static uint8_t cnt = 0;
 	static uint32_t totalCnt;
-//	if(clrFlag)
-//	{
-//		clrFlag = 0;
-//		SD_CleanupAll();
-//	}
-	if(HAL_GetTick()-timeStamp >= 1000)
+	static uint16_t hhmmLast;
+	if(hhmmLast != Get_hhmm())
 	{
-		timeStamp = HAL_GetTick();
-		tt1 = timeStamp;
+		hhmmLast = Get_hhmm();
+		tt1 = HAL_GetTick();
 
 		SD_Write_Record("TDAH", Get_YYMMDD(), Get_hhmm(), timeStr[cnt], 102);
 		SD_Write_Record("TOFH", Get_YYMMDD(), Get_hhmm(), timeStr[cnt], 102);
@@ -1417,15 +1390,8 @@ void SD_Test()
 		cnt %= 10;
 
 		tt2= HAL_GetTick() -tt1;
-		printf("%u, %u \r\n",totalCnt, tt2);
+		printf("%u, %u %u\r\n",totalCnt, tt2, hhmmLast);
 		totalCnt++;
 	}
-
-//	SD_Read_Range("TDAH",260623, 0, 2355);
-//	SD_Read_Range("TOFH",260624, 0, 2355);
-//	SD_Read_Range("TDDH",260625, 0, 2355);
-//	SD_Read_Range("TFDH",260626, 0, 2355);
-//	SD_Read_Range("TNOH",260627, 0, 2355);
-
 }
 

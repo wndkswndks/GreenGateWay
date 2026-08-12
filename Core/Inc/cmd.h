@@ -786,6 +786,14 @@ typedef enum
 
 	FLAG_PUPG = 33,
 
+
+	PUPG_ABORT = 1,
+	PUPG_DOWNFAIL = 2,
+	PUPG_FLASHFALE = 3,
+
+
+
+
 	FLASH_IDX_INIT = 0,
 
 	FLASH_IDX_FAC_0 = 1,
@@ -858,6 +866,12 @@ typedef struct
 	uint8_t stepNoneAck;
 	uint8_t stepNoneMsg;
 	uint8_t stepNoneNck;
+	uint8_t timeGet;
+	uint8_t gwIpGet;
+	uint8_t bootGet;
+	uint8_t svrIpSet;
+	uint8_t initRasComplete;
+
 }CMD_T;
 typedef struct
 {
@@ -1033,9 +1047,9 @@ uint32_t SD_GetLast_1_TDAH();
 
 uint32_t Get_YYMMDD();
 uint16_t Get_hhmm();
-uint32_t Rx_Init_Passing();
 uint8_t Chk_YYMMDDhhmm(uint32_t YYMMDDhhmm);
 void SD_Test();
+void YYMMDDhhmm_Cal();
 
 /*  			function end  			*/
 

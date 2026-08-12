@@ -148,9 +148,9 @@ int main(void)
   Greenlink_EncDec_Test();
 
   Uart_Init();
-  Test_Config();//
-  SD_Init();
-//  Gateway_Init();
+//  Test_Config();//
+//  SD_Init();
+  Gateway_Init();
 
   /* USER CODE END 2 */
 
@@ -161,7 +161,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    Testfunction();
+//    Testfunction();
   }
   /* USER CODE END 3 */
 }
