@@ -2342,7 +2342,9 @@ void Rsbery_Tx_PUPG(uint8_t num, char*str)
 
 	len = snprintf(buff, sizeof(buff), "[<%u,%s>]", num, str);
 	HAL_UART_Transmit(&huart1, (uint8_t*)buff, len, 100);
-	HAL_Delay(50);
+	 printf(">>>");
+	 HAL_UART_Transmit(&huart2, buff, len, 100);
+	 HAL_Delay(50);
 }
 
 void Rsbery_Tx_CMD(char*str)
@@ -3455,6 +3457,25 @@ void TimeOut_Msg()
     }
 
 }
+void Test_Tx_To_RasPi()
+{
+//	if(dq)
+	if(HAL_GPIO_ReadPin(BUTTON_1_GPIO_Port, BUTTON_1_Pin)==0)
+	{
+		HAL_Delay(100);
+	    Rsbery_Tx_PUPG(PUPG_F_HOST     ,"192.168.219.113");  /* SFTP 서버 주소      예: 192.168.219.113   */
+	    Rsbery_Tx_PUPG(PUPG_F_PORT     ,"22");  /* SFTP 포트 (숫자만)  예: 22                */
+	    Rsbery_Tx_PUPG(PUPG_F_PATH     ,"update/stm32103_new.hex");  /* 원격 파일 경로      예: update/testLED2.hex */
+	    Rsbery_Tx_PUPG(PUPG_F_USER     ,"sftp_test");  /* SFTP ID             예: sftp_test         */
+	    Rsbery_Tx_PUPG(PUPG_F_PWD      ,"dlfwjs3535!");  /* SFTP 비밀번호                             */
+	    Rsbery_Tx_PUPG(PUPG_F_FTP_TYPE ,"1");  /* FTP 타입 (숫자만)   1 = SFTP              */
+	    Rsbery_Tx_PUPG(PUPG_F_NEW_IP   ,"192.168.219.115");  /* 새 통신서버 IP                            */
+	    Rsbery_Tx_PUPG(PUPG_F_PRE_TUPG ,"TUPG OLD");  /* 사전 제작 TUPG (롤백 실패 시 RPi가 대신 송신) */
+	    Rsbery_Tx_PUPG(PUPG_F_START    ,"start");  /* 수집 완료 신호, 값은 반드시 "start"       */
+	}
+
+
+}
 
 void Rx_Get_Gateway(uint8_t rxData)
 {
@@ -3708,10 +3729,12 @@ void TxTest()
 {
 	static uint32_t timeStamp;
 
-	if(HAL_GetTick()-timeStamp >= 1000 )
+	if(HAL_GetTick()-timeStamp >= 100 )
 	{
 		timeStamp = HAL_GetTick();
-		Debug_printf("%u \r\n",HAL_GetTick());
+		HAL_GPIO_TogglePin(GPIOA, LED1_Pin);
+		HAL_GPIO_TogglePin(GPIOA, LED2_Pin);
+		HAL_GPIO_TogglePin(GPIOA, LED3_Pin);
 	}
 }
 void Uart_RxBuff_View(UART_T* uart, uint8_t data)
