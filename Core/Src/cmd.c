@@ -2095,7 +2095,7 @@ void YYMMDDhhmm_Cal()
 	timeCnt++;
 //	if(!m_Gcmd.initRasComplete)return;
 
-	if(timeCnt >= 1000)
+	if(timeCnt >= 100)
 	{
 		timeCnt = 0;
 		m_time.sec++;
@@ -2352,10 +2352,30 @@ void Rsbery_Tx_CMD(char*str)
 	char buff[60] = {0,};
 	int len;
 
-	len = snprintf(buff, sizeof(buff), "[<%s>]", str);
+	len = snprintf(buff, sizeof(buff), "%s", str);
 	HAL_UART_Transmit(&huart1, (uint8_t*)buff, len, 100);
+
+	 printf(">>>");
+	 HAL_UART_Transmit(&huart2, (uint8_t*)buff, len, 100);
 	HAL_Delay(50);
 }
+void Tx_To_RasPi(char*txStr)
+{
+	char buff[60] = {0,};
+	int len;
+
+	len = sprintf(buff,"%s",txStr);
+	HAL_UART_Transmit(&huart1, buff, len, 100);
+	HAL_UART_Transmit(&huart2, buff, len, 100);
+}
+
+uint8_t Rsbery_initTest()
+{
+//	Rsbery_Tx_CMD(CMD_CTRL_BOOT);
+	Tx_To_RasPi("[<boot>]");
+
+}
+
 uint8_t Rsbery_REQ_Config()
 {
 	static uint8_t step = STEP0;
@@ -3729,7 +3749,7 @@ void TxTest()
 {
 	static uint32_t timeStamp;
 
-	if(HAL_GetTick()-timeStamp >= 100 )
+	if(HAL_GetTick()-timeStamp >= 1000 )
 	{
 		timeStamp = HAL_GetTick();
 		HAL_GPIO_TogglePin(GPIOA, LED1_Pin);

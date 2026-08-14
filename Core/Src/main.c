@@ -141,16 +141,17 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   /* [�߰�] ���� ���� ���� 1ȸ ���� ���� ���� ������ �ؽ��ڵ� �ǽð� ���� */
-  Calculate_Firmware_Hash();
+  //Calculate_Firmware_Hash();
   /* ���� g_firmware_sha256 ���� ���� �迭�� ���� �ؽ� 32����Ʈ�� �����Ǿ����ϴ�. */
   /* �� ���� ���α׷� �ڵ带 �� 1���ڶ� �����ϰ� �ٽ� �����ϸ� �˾Ƽ� ���մϴ�. */
 //  SEED_TestVector1_Verify();
-  Greenlink_EncDec_Test();
+ // Greenlink_EncDec_Test();
 
   Uart_Init();
-//  Test_Config();//
-//  SD_Init();
-  Gateway_Init();
+  Test_Config();//
+  SD_Init();
+//  Gateway_Init();
+//  Rsbery_initTest();
 
   /* USER CODE END 2 */
 
@@ -163,6 +164,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
 //    Testfunction();
   	  TxTest();
+  	  Test_Tx_To_RasPi();
 
   }
   /* USER CODE END 3 */
