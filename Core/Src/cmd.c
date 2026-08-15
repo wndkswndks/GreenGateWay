@@ -3749,7 +3749,7 @@ void TxTest()
 {
 	static uint32_t timeStamp;
 
-	if(HAL_GetTick()-timeStamp >= 1000 )
+	if(HAL_GetTick()-timeStamp >= 500 )
 	{
 		timeStamp = HAL_GetTick();
 		HAL_GPIO_TogglePin(GPIOA, LED1_Pin);
