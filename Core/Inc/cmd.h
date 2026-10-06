@@ -42,7 +42,7 @@
 #define   TOTAL_LEN_TVER11   	 	 126
 #define   TOTAL_LEN_TFCR15(N)   	 (22+10*N)
 #define   TOTAL_LEN_TFCR16(N)   	 (22+10*N)
-#define   TOTAL_LEN_TCN2_20(N)   	 (155+24*N)
+#define   TOTAL_LEN_TCN2_21(N)   	 (155+24*N)
 
 #define	  FLASH_GET_IDX_FAC(N)			(6*N+1)
 #define	  FLASH_GET_IDX_ITEM(N)			(6*N+2)
@@ -70,17 +70,21 @@
 
 #define DAY_YYMMDD(YY,MM,DD)	(YY*10000 + MM*100 + DD)
 #define DAY_hhmmss(hh,mm,ss)	(hh*10000 + mm*100 + ss)
+#define DAY_YYMMDDhhmm(YYMMDD,hhmm)	(YYMMDD*10000 + hhmm)
+#define DAY_YYYYMMDD(YYMMDD)	(YYMMDD+20000000)
 
 
 
 
 //서버 rx 파싱용 ==========================
 
+#define	MAX_COMM_1 		0
+#define	MIN_COMM_1 		0
 
 #define  MIN_COMM_2		0
 #define  MAX_COMM_2		9999999
 #define  MIN_COMM_3		0
-#define  MAX_COMM_3		9
+#define  MAX_COMM_3		0
 
 
 #define  MIN_5_PDUH_6		2606030155
@@ -98,7 +102,7 @@
 #define  MIN_9_PTIM_5_1		260603
 #define  MAX_9_PTIM_5_1		360603
 #define  MIN_9_PTIM_5_2		0
-#define  MAX_9_PTIM_5_2		240000
+#define  MAX_9_PTIM_5_2		235959
 
 #define  MIN_10_PUPG_5		0
 #define  MAX_10_PUPG_5		9
@@ -145,6 +149,15 @@
 #define CMD_TFCR	"TFCR"//
 #define CMD_TCN2	"TCN2"//
 
+
+#define CMD_TDUH_FIV	"TDUH05"//5
+#define CMD_TDUH_HAF	"TDUH30"//5
+#define CMD_TOFH_FIV	"TOFH05"//2
+#define CMD_TOFH_HAF	"TOFH30"//2
+#define CMD_TDDH_FIV	"TDDH05"//3
+#define CMD_TDDH_HAF	"TDDH30"//3
+
+
 #define	CMD_PDUH	"PDUH"
 #define	CMD_PFST	"PFST"
 #define	CMD_PSEP	"PSEP"
@@ -162,7 +175,6 @@
 #define	CMD_PCN2	"PCN2"
 #define	CMD_PRBT	"PRBT"
 
-#define	CMD_CTRL_START	"[<,"
 #define	CMD_CTRL_TIME_RX		"[<time,"
 #define	CMD_CTRL_TIME_REQ		"[<time>]"
 
@@ -170,10 +182,27 @@
 #define	CMD_CTRL_DOWNFAIL		"[<downFail>]"
 #define	CMD_CTRL_FLASHFALE		"[<flashFail>]"
 #define	CMD_CTRL_TUPG			"[<TUPG>]"
-#define	CMD_CTRL_GW_IP_RX		"[<gwip,192.168."
+#define	CMD_CTRL_GW_IP_RX		"[<gwip,"
 #define	CMD_CTRL_GW_IP_REQ		"[<gwip>]"
 #define	CMD_CTRL_BOOT			"[<boot>]"
 #define	CMD_CTRL_SVR_IP			"[<svrip>]"
+#define	CMD_CTRL_SVR_ERR		"[<svrerr>]"
+#define	CMD_CTRL_SVR_OK			"[<svrok>]"
+#define	CMD_CTRL_SOKET_T_OPEN		"[<open>]"
+#define	CMD_CTRL_SOKET_T_OPEN_OK	 "[<opened>]"
+#define	CMD_CTRL_SOKET_T_OPEN_ERR	 "[<openerr>]"
+#define	CMD_CTRL_SOKET_T_CLOSE		"[<close>]"
+#define	CMD_CTRL_SOKET_T_CLOSE_OK	"[<closed>]"
+
+#define	CMD_CTRL_SOKET_P_OPEN		"[<pcon>]"
+#define	CMD_CTRL_SOKET_P_CLOSE		"[<pdis>]"
+
+//[<openerr>]
+//[<closed>]
+//[<pcon>]
+//[<pdis>]
+
+
 
 #define	CMD_CTRL_END	">]"
 
@@ -194,8 +223,8 @@
 #define	TXMODE_ALL 	"ALL"
 
 #define	TXMODE_HAF_NUM      0
-#define	TXMODE_FIV_NUM	    1
-#define	TXMODE_ALL_NUM 	    2
+#define	TXMODE_ALL_NUM 	    1
+#define	TXMODE_FIV_NUM	    2
 
 #define	HAF_IDX      0
 #define	FIV_IDX	    1
@@ -215,6 +244,8 @@
 #define DAY_1_30_END  47//하루 30분 마지막 인덱스
 
 
+#define FLASH_USER_START_ADDR   0x0801FC00 // 마지막 섹터 주소 예시
+#define FLASH_SIZE_WORDS 256
 
 
 /*  			define end  			*/
@@ -233,8 +264,10 @@ typedef enum
 	CMD_SET_STAND_VAL = 5,
 	CMD_READ_ITEM = 6,
 	CMD_SET_COUPLE = 7,
-	CMD_SET_IP_3	= 8,
-	CMD_SET_IP_4	= 9,
+	CMD_SET_IP_0	= 8,
+	CMD_SET_IP_1	= 9,
+	CMD_SET_IP_2	= 10,
+	CMD_SET_IP_3	= 11,
 
 } UART_E;
 
@@ -595,7 +628,7 @@ typedef enum
 	// [17] 통신서버IP 변경 요청 (PRSI) - 고정 길이 구조
 	// ========================================================================================
 	IDX_PRSI17_5 = 18,	 // 암호화된 통신서버 IP (16)
-	IDX_PRSI17_CRC = 33, // ★ CRC 시작 인덱스 고정
+	IDX_PRSI17_CRC = 34, // ★ CRC 시작 인덱스 고정
 
 	// ========================================================================================
 	// [18] 자료전송모드 변경 요청 (PDAT) - 고정 길이 구조
@@ -660,7 +693,7 @@ typedef enum
     ========================================================================================
 
     1)  TDAH    35+15N      1)
-    2)  TOFH    34+8N       2)
+    2)  TOFH    34+4N       2)
     3)  TDDH    42+21N      3)
     4)  TFDH    35+15N      4)
     5)  TDUH    35+15N      5)  PDUH    43
@@ -668,7 +701,7 @@ typedef enum
     7)                      7)  PFST    24
     8)                      8)  PSEP    36
     9)  TTIM    20          9)  PTIM    32
-    10) TUPG    126         10) PUPG    151
+    10) TUPG    126         10) PUPG    164
     11) TVER    126         11) PVER    20
     12)                     12) PSET    32
     13)                     13) PFCC    30
@@ -703,9 +736,13 @@ typedef enum
 	VIEW_ADD_9 = 9,
 	VIEW_ADD_10 = 10,
 	VIEW_ADD_11 = 11,
+	VIEW_ADD_12 = 12,
+	VIEW_ADD_13 = 13,
+	VIEW_ADD_14 = 14,
+	VIEW_ADD_15 = 15,
+	VIEW_ADD_16 = 16,
 
-	MAX_COMM_1 = 0,
-	MIN_COMM_1 = 0,
+
 //ID===================
 	ID_TDAH_1  = 1,
 	ID_TOFH_2  = 2,
@@ -713,37 +750,43 @@ typedef enum
 	ID_TFDH_4  = 4,
 	ID_TDUH_5  = 5,
 	ID_TNOH_6  = 6,
-	ID_TTIM_9  = 7,
-	ID_TUPG_10 = 8,
-	ID_TVER_11 = 9,
-	ID_TFCR_15 = 10,
-	ID_TFCR_16 = 11,
-	ID_TCN2_20 = 12,
+	ID_TTIM_9  = 9,
+	ID_TUPG_10 = 10,
+	ID_TVER_11 = 11,
+	ID_TFCR_15 = 15,
+	ID_TFCR_16 = 16,
+	ID_TCN2_20 = 20,
 
-	ID_PDUH_5  = 13,
-	ID_PFST_7  = 14,
-	ID_PSEP_8  = 15,
-	ID_PTIM_9  = 16,
-	ID_PUPG_10 = 17,
-	ID_PVER_11 = 18,
-	ID_PSET_12 = 19,
-	ID_PFCC_13 = 20,
-	ID_PAST_14 = 21,
-	ID_PFCR_15 = 22,
-	ID_PFRS_16 = 23,
-	ID_PRSI_17 = 24,
-	ID_PDAT_18 = 25,
-	ID_PODT_19 = 26,
-	ID_PCN2_20	= 27,
-	ID_PRBT_22 = 28,
+	ID_PDUH_5  = 35,
+	ID_PFST_7  = 37,
+	ID_PSEP_8  = 38,
+	ID_PTIM_9  = 39,
+	ID_PUPG_10 = 40,
+	ID_PVER_11 = 41,
+	ID_PSET_12 = 42,
+	ID_PFCC_13 = 43,
+	ID_PAST_14 = 44,
+	ID_PFCR_15 = 45,
+	ID_PFRS_16 = 46,
+	ID_PRSI_17 = 47,
+	ID_PDAT_18 = 48,
+	ID_PODT_19 = 49,
+	ID_PCN2_20	= 50,
+	ID_PRBT_22 = 52,
+	ID_TOFH_2_LAST = 60,
+	ID_TDDH_3_LAST = 61,
 
+	IDX_START = 0,
+	IDX_END = 1,
 
+	SD_MODE = 0,
+	TX_MODE = 1,
 
 	OPER_START_GRACE = 9, //배출시설 가동유예
 	PROTEC_STOP_GRACE = 8,// 방지시설 중지유예
 	ABNORMAL = 0, // 비정상
 	NORMAL = 1,// 정상
-	N_A = 3,
+	N_A = 3, //해당없음
 
 
 	OPER_NO = 0, //5분 미가동
@@ -775,7 +818,9 @@ typedef enum
 	ITEM_CODE_T = 3,
 	ITEM_CODE_H = 4,
 	ITEM_CODE_a = 5,
-	ITEM_CODE_b = 6,
+	ITEM_CODE_d = 6,
+	ITEM_CODE_t = 7,
+	ITEM_CODE_h = 8,
 
 	FACI_CODE_E = 1,
 	FACI_CODE_P = 2,
@@ -791,11 +836,34 @@ typedef enum
 	PUPG_DOWNFAIL = 2,
 	PUPG_FLASHFALE = 3,
 
+	SOKET_T_OPEN_CLR = 0,
+	SOKET_T_OPEN_OK = 1,
+	SOKET_T_OPEN_ERR = 2,
+	SOKET_T_CLOSE_OK = 3,
+
+	SOKET_P_CLOSE = 0,
+	SOKET_P_OPEN = 1,
 
 
+	IDX_MODE = 0,
+	IDX_CMD = 1,
 
+	IDX_CMD5_FIV = 0,
+	IDX_CMD5_HAF = 1,
+	IDX_CMD6 = 2,
+	IDX_CMD2_FIV = 3,
+	IDX_CMD2_HAF = 4,
+	IDX_CMD3_FIV = 5,
+	IDX_CMD3_HAF = 6,
+
+	IDX_START_DAY = 0,
+	IDX_START_POS = 1,
+} GREEN_E;
+
+typedef enum
+{
 	FLASH_IDX_INIT = 0,
-
+//========항목
 	FLASH_IDX_FAC_0 = 1,
 	FLASH_IDX_ITEM_0 = 2,
 	FLASH_IDX_COUPLE_0 = 3,
@@ -830,17 +898,31 @@ typedef enum
 	FLASH_IDX_MIN_4 = 28,
 	FLASH_IDX_MAX_4 = 29,
 	FLASH_IDX_STAND_4 = 30,
+	//========항목
 
-	FLASH_IDX_PUPG_EN = 49,
-	FLASH_IDX_IP_OLD_2 = 50,//IP 0.1.2.3
-	FLASH_IDX_IP_OLD_3 = 51,//IP 0.1.2.3
+	FLASH_IDX_IP_OLD_0 = 50,//IP 0.1.2.3
+	FLASH_IDX_IP_OLD_1 = 51,//IP 0.1.2.3
+	FLASH_IDX_IP_OLD_2 = 52,//IP 0.1.2.3
+	FLASH_IDX_IP_OLD_3 = 53,//IP 0.1.2.3
 
-	FLASH_IDX_IP_NEW_2 = 52,//IP 0.1.2.3
-	FLASH_IDX_IP_NEW_3 = 53,//IP 0.1.2.3
+	FLASH_IDX_IP_NEW_0 = 54,//IP 0.1.2.3
+	FLASH_IDX_IP_NEW_1 = 55,//IP 0.1.2.3
+	FLASH_IDX_IP_NEW_2 = 56,//IP 0.1.2.3
+	FLASH_IDX_IP_NEW_3 = 57,//IP 0.1.2.3
+
+
+	FLASH_IDX_NO_TXTIME = 58,
+	FLASH_IDX_PASSWARD = 59,
+	FLASH_IDX_DISPOS_DELTIME = 60,
+	FLASH_IDX_PROTECT_DELTEIM = 61,
+	FLASH_IDX_TRANSFER_MODE = 62,
+
+	FLASH_IDX_CMD_4_CNT = 63,
+	FLASH_IDX_REBOOT = 64,
+	FLASH_IDX_PW_OFF = 65,
 	FLASH_IDX_MAX_OVER,
 
-
-} GREEN_E;
+} FLASH_IDX_E;
 /*  			enum end  				*/
 
 
@@ -848,46 +930,55 @@ typedef enum
 /*  			stuct start  			*/
 typedef struct
 {
-	uint8_t rxBuff[160];
-	uint8_t passingBuff[160];
-	uint8_t passingCnt;
-	uint8_t rxCnt;
-	uint16_t txCnt;
-	uint32_t rxTimeStamp;
-	uint32_t txMsgTimeStamp;
-	uint8_t txMsgFlag;
-	uint32_t txAckTimeStamp;
-	uint8_t txAckFlag;
-	uint8_t eotTx;
-	char txAllBuff[40];
-	uint8_t ID;
-	uint8_t txCmd;
+	uint8_t rxBuff[190];//
+	uint8_t passingBuff[190];//
+	uint8_t passingCnt;//
+	uint8_t passingErr;//
+	uint8_t rxCnt;//
+	uint16_t txCnt;//
+	uint32_t rxTimeStamp;//
+	uint32_t txMsgTimeStamp;//
+	uint8_t txMsgFlag;//
+	uint32_t txAckTimeStamp;//
+	uint8_t txAckFlag;//
+	uint8_t ID;//
+	uint8_t txCmd;//
+	uint8_t txCmdBuff[15][2];
+	uint8_t txCmdCnt;
+	uint8_t txTotalCnt;
+	uint8_t txCmdEnd;
+
 	uint8_t txUse;
+	uint8_t soketTStatus;
+	uint8_t soketPStatus;
+	uint8_t soketOpenSkip;
 	uint8_t stepNoneAck;
 	uint8_t stepNoneMsg;
-	uint8_t stepNoneNck;
 	uint8_t timeGet;
 	uint8_t gwIpGet;
 	uint8_t bootGet;
 	uint8_t svrIpSet;
 	uint8_t initRasComplete;
-
+	uint8_t svrErrCnt;
+	uint32_t closeTime;
 }CMD_T;
 typedef struct
 {
+	uint8_t YY;
+	uint8_t MM;
+	uint8_t DD;
 	uint8_t hour;
 	uint8_t min;
 	uint8_t sec;
-	uint8_t DD;
-	uint8_t MM;
-	uint8_t YY;
 
 	uint8_t secChange1;
 	uint8_t minChange1;
+	uint8_t minChange2;
 	uint8_t minChange3;
 	uint8_t minChange4;
 	uint32_t wakeUpDayTime;
 	uint32_t lastTxDayTime;
+	uint32_t psetOldTime;
 
 } TIME_T;
 
@@ -900,15 +991,18 @@ typedef struct
 	uint8_t operStatus[2];//가동상태 [1][4][5][6]
 	uint8_t protectStatus[2];//배출시설 정상여부 [1][4][5][6]
 
-	uint8_t valueBuff[6];//측정값 [1][4][5]
+	float valueBuff[6];//측정값 [1][4][5]
 	uint8_t statusBuff[6];//자료상태 [1][4][5]
 	uint8_t operStatusBuff[6];//가동상태 [1][4][5][6]
 	uint8_t protectStatusBuff[6];//배출시설 정상여부 [1][4][5][6]
 
-	uint16_t disposDelTimeCnt;//배출시설 가동유예시간(분) 카운터 9
-	uint16_t protectDelTimeCnt;//방지시설 정지유예시간(분) 카운터 8
-	uint8_t disposDelFlag;
-	uint8_t protectDelFlag;
+	uint16_t disposDel9_TimeCnt;//배출시설 가동유예시간(분) 카운터 9
+	uint16_t protectDel8_TimeCnt;//방지시설 정지유예시간(분) 카운터 8
+	uint8_t operStatus5Sec; //배출시설 가동상태 5초데이터
+	uint8_t operStatus5SecPre; //방지시설 가동상태 5초데이터
+	uint8_t operStatus5SecStatus; //배출시설 가동상태 5초데이터
+
+
 
 	uint16_t nomalCnt[2];//정상건수[3]
 	uint16_t abnomalCnt[2];//비정상건수[3]
@@ -921,29 +1015,25 @@ typedef struct
 	uint8_t couple;
 	uint8_t status5sec[60];//5초 자료상태 [1][4][5]
 	uint8_t value5sec[60];//5초 측정값 [1][4][5]
+	uint8_t protect5sec[60];
+	uint8_t dataStatus;
 
 } PART_T;
 
 typedef struct
 {
-
+	uint32_t workPlaceCode;//사업장코드[공통]
 	uint8_t chimCode;//굴뚝코드[공통]
-	uint16_t allLan;//전체길이[공통]
-	uint32_t measureTime;//측정시간[공통] // YYMMDDhhmm
 	uint8_t itemNum;
 	uint8_t itemMode;
-	uint8_t itemAllFlag1;
-	uint8_t itemAllFlag2;
-	uint8_t itemAllFlag3;
-	PART_T item[5];//항목
-	uint8_t status5SecCnt;
+
+	PART_T item[10];//항목
 	uint8_t status5MinCnt;
-	uint8_t dataStatus;
-	uint32_t powerOffDay;//전원단절 기준일자 yyyyMMDD[2]
-	uint32_t closeDate;
-	uint16_t dayCnt;
-	uint16_t TDAHcnt;//TDAH건수[3]
-	uint16_t TOFHcnt;//TOFH건수[3]
+
+	uint32_t closeDate[2];
+	uint16_t dayCnt[2];
+	uint16_t TDAHcnt[2];//TDAH건수[3]
+	uint16_t TOFHcnt[2];//TOFH건수[3]
 
 	uint16_t noTxTime;//미전송시간[7] hhmm
 	uint32_t passWard;//비밀번호 10자리 [8]
@@ -952,8 +1042,8 @@ typedef struct
 	char FTPipDomain[40]; // [10]
 	char FTPport[5]; // [10]
 	char road[50]; //경로 // [10]
-	char FTPid[10]; // [10]
-	char FTPpwd[10]; // [10]
+	char FTPid[11]; // [10]
+	char FTPpwd[11]; // [10]
 	uint8_t IP[4]; // [10][11][17]
 
 	uint8_t GWip[4]; // [10][11]
@@ -966,31 +1056,49 @@ typedef struct
 	uint16_t protectDelTime;//방지시설 정지유예시간(분)[19]
 
 	uint8_t transferMode;//[21][공통][18]
-	uint32_t sevrDay; // 서버 날짜 6자리 YYMMDD
-	uint32_t sevrTime;// 서버시간 6자리 hhmmss [9][12]
-    uint32_t startDay;//시작일시[5]
-    uint32_t endDay;//끝일시[5]
 
+	uint8_t cmd1AllFlag;
+	uint8_t cmd2AllFlag;
+	uint8_t cmd2OffAllFlag;
+	uint8_t cmd3AllFlag;
+
+    uint32_t cmd5startDay;//시작일시[5]
+    uint32_t cmd5endDay;//끝일시[5]
+    uint32_t cmd5startTime;//시작시각[5]
+    uint32_t cmd5endTime;//끝시각[5]
     uint32_t cmd5day;
-    uint32_t cmd5next;
+    uint32_t cmd5SdStatus;
     uint32_t cmd5idx;
+    uint32_t cmd5idxMax;
+	uint32_t cmd5TxTime;
+	uint32_t cmd5TxDay;
+	char cmd5Buff[7][7];
+	uint32_t cmd5TxBuff[7][2];
+	uint8_t cmd5stepBuff[7];
+	uint8_t cmd5Eot;
+	uint8_t cmd5Finsh;
+	uint8_t cmd5ReTry;
 
-    uint8_t cmd2TotalDay;
+
+    uint32_t cmd2PwOffStartDay[2];
     uint16_t cmd2TimeSE[2][4][2];
-    uint32_t cmd2DayBuff[4]; //전원단절 기준일자 yyyyMMDD[2] // 최대 4일간
-    uint8_t cmd2DayCnt;
+    uint32_t cmd2DayBuff[2][4]; //전원단절 기준일자 yyyyMMDD[2] // 최대 4일간
+    uint8_t cmd2DayCnt[2];
 	uint8_t cmd2Done;
+    uint8_t cmd2TotalDay[2];
+	uint8_t cmd2pwOffFlag;
 
+    uint32_t cmd3DayOffBuff[2][4];
+	uint8_t cmd3DayOffCnt[2];
+	uint8_t cmd3Num[2];
+	uint32_t cmd3next;
 
 	uint32_t cmd4next;
-	uint32_t cmd4fin;
-    uint16_t cmd4idx;
 	uint32_t cmd4day;
 	uint32_t cmd4TxTime;
 	uint32_t cmd4TxDay;
-	uint8_t cmd4Tx9999Flag;
+	uint8_t cmd4Active;
 
-	uint8_t cmd10En;
 } CHIMNEY_T;
 
 
@@ -1013,43 +1121,76 @@ typedef struct
 
 
 /*  			function start  		*/
-void TxTest();
+void Led_Toggle();
 void Uart_Init();
 
 void UartRx1DataProcess();
 void UartRx2DataProcess();
 void UartRx3DataProcess();
-void Uart_Gulobal();
 void Test_Config();
 void Testfunction();
 uint8_t strtol_n(const uint8_t *str, uint32_t * data, uint16_t idx, int n,  uint32_t min, uint32_t max, uint8_t viewAdd);
-void SD_Write_Record(char* dirName, uint32_t yymmdd, uint16_t hhmm, const uint8_t* data, uint16_t len);
+void SD_Write_Record(char* dirName, uint32_t yymmdd, uint16_t hhmm,  uint8_t* data, uint16_t len);
 
-uint8_t SD_Read_Step_TxMsg(const char* dirName, uint32_t YYMMDD);
+uint8_t SD_Read_Day_TxMsg(const char* dirName, uint32_t YYMMDD);
+uint8_t SD_Only_Read(const char* dirName, uint32_t YYMMDD , uint16_t* Len);
+
+void SD_Clear_File(const char* dirName, uint32_t yymmdd);
+
 void SD_Delete_Record(const char* dirName, uint32_t YYMMDD, uint16_t hhmm);
 void SD_CleanupAll(void);
+uint8_t SD_Find_Time_Position(const char* dirName, uint32_t YYMMDD, uint16_t hhmm, uint16_t* getTime);
 
 uint32_t YYMMDD_Add(uint32_t YYMMDD);
 uint32_t YYMMDD_Sub(uint32_t YYMMDD);
-uint32_t Get_YYMMDD();
 uint32_t YYMMDD_Sub(uint32_t YYMMDD);
 uint32_t MM_End_MMDD(uint32_t YYMMDD);
 void RX_Fail_NextStep();
 void TimeOut_Msg();
-void TNOH_6_Start();
-void TDUH_5_Start();
-void TFDH_4_Tx_9999();
+void TDUH_5_Start(uint8_t itemMode);
+uint8_t TDUH_5_Find(const char* dirName, uint32_t* sDay, uint32_t* sPos);
+
 uint32_t Get_YYMMDDhhmm();
 void Five_Min_GetData();
 void Thirty_Min_GetData();
 void Five_Sec_GetData();
 uint32_t SD_GetLast_1_TDAH();
+void SD_Set_Idx(uint8_t idx);
+uint32_t SD_Get_Idx();
 
 uint32_t Get_YYMMDD();
 uint16_t Get_hhmm();
 uint8_t Chk_YYMMDDhhmm(uint32_t YYMMDDhhmm);
-void SD_Test();
+void SD_Read_Test();
+
 void YYMMDDhhmm_Cal();
+void Rsbery_Tx_CMD(char*str);
+uint32_t Get_Pre_YYMMDDhhmm();
+void Tx_1_TDAH(uint8_t itemMode, uint8_t txEn);
+void Tx_2_TOFH(uint8_t itemMode, uint8_t txEn);
+uint32_t Get_Pre_YYYYMMDD();
+uint32_t Get_Pre_YYMMDD();
+void Rx_Passing_ACK();
+
+void TOFH_2_Start(uint32_t startDay, uint32_t endDay);
+void TDAH_1_Start();
+void Tx_3_TDDH(uint8_t itemMode, uint8_t txEn, uint32_t yyyymmdd);
+
+void Passing_Read_SD_TDDH3(uint32_t YYMMDD,uint8_t itemMode);
+void Tx_TOFH2_Last(uint8_t itemMode, uint8_t txEn);
+void Tx_Cmd_Instruction(uint8_t* buff, uint16_t cnt);
+void Save_1_TDAH_when(uint8_t itemMode, uint32_t YYMMDDhhmm);
+void Debug_printf(const char *format, ...);
+void TxCmd_Buff_TotalView();
+void Rx_Passing_EOT();
+uint32_t Get_hhmmss();
+void TX_NAK();
+void TX_EOT();
+void User_Setting_Passing_Pop(int cmd, int data);
+void Rx_Get_Gateway(uint8_t rxData);
+void Gateway_Init();
+void Rx_Gateway_Config();
+
 
 /*  			function end  			*/
 

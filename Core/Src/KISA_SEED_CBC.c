@@ -1407,13 +1407,13 @@ BYTE plain_out[200] = {0x00};
 void Greenlink_EncDec_Test()
 {
     /* 암호화 */
-    BYTE ip[150]         = "Q123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890abcdefghij";
+    BYTE ip[150] = "1                         192.168.219.113   22                           update/stm32103_new.hex sftp_testdlfwjs3535192.168.219.113";
 
-    Greenlink_Encrypt(ip, 131, cipher_out);
+    Greenlink_Encrypt(ip, strlen(ip), cipher_out);
 
     /* 복호화 */
 
-    Greenlink_Decrypt(cipher_out, plain_out, 144 ,131);
+    Greenlink_Decrypt(cipher_out, plain_out, 144 ,strlen(ip));
     /* plain_out → "192.168.001.001\0" */
 
 }

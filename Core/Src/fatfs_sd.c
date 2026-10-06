@@ -20,7 +20,7 @@ static uint8_t CardType;                                /* SD ?Ä??0:MMC, 1:SDC, 
 static uint8_t PowerFlag = 0;                           /* Power ?ÅÌÉú Flag */
 
 
-void Tx_DayTimeSave(uint32_t YYMMDD, uint16_t hhmm);
+uint8_t Tx_DayTimeSave(uint32_t YYMMDD, uint16_t hhmm);
 void TxAllBuff_Set(uint8_t* msg, uint16_t len);
 uint16_t Get_YYMMDD(void);   // Ω«¡¶ π›»Ø ≈∏¿‘ø° ∏¬∞‘ ºˆ¡§
 uint16_t Get_hhmm(void);
@@ -671,12 +671,21 @@ void SD_Init(void)
     /* 6∞≥ ∏Ì∑…æÓ µ∑∫≈Õ∏Æ, ∫Œ∆√ Ω√ «— π¯∏∏ ª˝º∫ (¿ÃπÃ ¿÷¿∏∏È FR_EXIST, π´Ω√) */
 
     uint8_t err = 0;
-    err |= SD_Mkdir_Chk("TDAH");
-    err |= SD_Mkdir_Chk("TOFH");
-    err |= SD_Mkdir_Chk("TDDH");
-    err |= SD_Mkdir_Chk("TFDH");
-    err |= SD_Mkdir_Chk("TNOH");
-    err |= SD_Mkdir_Chk("TDUH");
+//    err |= SD_Mkdir_Chk("TDAH05"); //1
+//    err |= SD_Mkdir_Chk("TDAH30"); //1
+
+    err |= SD_Mkdir_Chk("TOFH05"); //2
+    err |= SD_Mkdir_Chk("TOFH30"); //2
+
+    err |= SD_Mkdir_Chk("TDDH05"); //3
+    err |= SD_Mkdir_Chk("TDDH30"); //3
+
+    err |= SD_Mkdir_Chk("TFDH"); //4
+
+    err |= SD_Mkdir_Chk("TDUH05"); //5
+    err |= SD_Mkdir_Chk("TDUH30"); //5
+
+    err |= SD_Mkdir_Chk("TNOH"); //6
 
     if(err) { printf("SD_Init FAILED: directory setup error\r\n"); return; }
 
@@ -779,9 +788,10 @@ typedef struct {
   uint16_t len;         // µ•¿Ã≈Õ ±Ê¿Ã (2byte)
 } RecordHeader;
 
-void SD_Write_Record(char* dirName, uint32_t yymmdd, uint16_t hhmm, const uint8_t* data, uint16_t len)
+void SD_Write_Record(char* dirName, uint32_t yymmdd, uint16_t hhmm,  uint8_t* data, uint16_t len)
 {
   char filename[24];
+
   sprintf(filename, "%s/%lu.txt", dirName, yymmdd);
 
   uint32_t pos;
@@ -828,7 +838,9 @@ void SD_Write_Record(char* dirName, uint32_t yymmdd, uint16_t hhmm, const uint8_
   }
 
   // ®Ë µ•¿Ã≈Õ æ≤±‚
-  if(SD_Error_Chk(f_write(&fil, data, len, &bw), "f_write(data)"))
+  data[len] = '\r';//∫∏±‚ ∆Ì«œ∞‘ «œ±‚ ¿ß«œø©
+  data[len+1] = '\n';//∫∏±‚ ∆Ì«œ∞‘ «œ±‚ ¿ß«œø©
+  if(SD_Error_Chk(f_write(&fil, data, (len+2), &bw), "f_write(data)"))
   {
     f_lseek(&fil, pos);
     f_truncate(&fil);
@@ -846,6 +858,9 @@ void SD_Write_Record(char* dirName, uint32_t yymmdd, uint16_t hhmm, const uint8_
   }
 
   SD_Error_Chk(f_close(&fil), "f_close");
+
+
+  printf("[SD WriteOk]\r\n");
 }
 
 
@@ -853,7 +868,7 @@ void SD_Write_Record(char* dirName, uint32_t yymmdd, uint16_t hhmm, const uint8_
 uint32_t g_NextReadPos = 0;
 uint8_t readSDbuff[1200] = {0,};
 extern UART_HandleTypeDef huart1;
-uint8_t SD_Read_Step_TxMsg(const char* dirName, uint32_t YYMMDD)
+uint8_t SD_Read_Day_TxMsg(const char* dirName, uint32_t YYMMDD)
 {
   RecordHeader hdr;
   UINT br;
@@ -865,7 +880,183 @@ uint8_t SD_Read_Step_TxMsg(const char* dirName, uint32_t YYMMDD)
   if (SD_Error_Chk(f_open(&fil, filename, FA_READ), "f_open"))
   {
     g_NextReadPos = 0;
+    printf("SD_NO_EXIST_FILE\r\n");
+    return SD_NO_EXIST_FILE;
+  }
+
+  if (SD_Error_Chk(f_lseek(&fil, g_NextReadPos), "f_lseek"))
+  {
+    printf("SD_ERR_NEXT_FILE 1\r\n");
+    f_close(&fil);
+    g_NextReadPos = 0;
     return SD_ERR_NEXT_FILE;
+  }
+
+  FRESULT res = f_read(&fil, &hdr, sizeof(hdr), &br);
+  // 1. «œµÂø˛æÓ/∆ƒ¿œΩ√Ω∫≈€ ¿–±‚ ø°∑Ø πﬂª˝ Ω√
+	if (res != FR_OK)
+	{
+	  printf("f_read header error = %d\r\n", res);
+	  printf("SD_ERR_NEXT_FILE 2\r\n");
+	  g_NextReadPos = 0;
+	  f_close(&fil);
+	  return SD_ERR_NEXT_FILE;
+	}
+
+	// 2. ¡§ªÛ ∆ƒ¿œ ≥°(EOF) µµ¥ﬁ Ω√
+	if (br == 0)
+	{
+	  printf("SD_ERR_NEXT_FILE 3\r\n");
+	  g_NextReadPos = 0;
+	  f_close(&fil);
+	  return SD_ERR_NEXT_FILE;
+	}
+
+	// 3. «Ï¥ı∞° 8πŸ¿Ã∆Æ πÃ∏∏¿∏∑Œ ¿ﬂ∑¡ ¿÷¥¬ ∫Ò¡§ªÛ ªÛ≈¬ (∆ƒ¿œ º’ªÛ)
+	if (br < sizeof(hdr))
+	{
+	  printf("Incomplete header (got %u bytes). File corrupted.\r\n", br);
+	  printf("SD_ERR_NEXT_FILE 4\r\n");
+	  g_NextReadPos = 0;
+	  f_close(&fil);
+	  return SD_ERR_NEXT_FILE;
+	}
+
+
+  // ==========================================================
+  // °⁄ startFlag ∞À¡ı π◊ ø°∑Ø ∫π±∏(Recovery) ∑Œ¡˜
+  // ==========================================================
+  if (hdr.startFlag[0] != '>' || hdr.startFlag[1] != '>')
+  {
+    printf("Corruption Detected! Sync lost at pos %lu. Scanning...\r\n", g_NextReadPos);
+
+    uint8_t c;
+    uint8_t prev_c = 0;
+    uint8_t sync_found = 0;
+    uint32_t scan_count = 0;
+    const uint32_t MAX_SCAN = 4096;   // √÷¥Î Ω∫ƒµ πŸ¿Ã∆Æ ¡¶«—
+
+    // ¿ﬂ∏¯ ¿–¿∫ «Ï¥ı ¿ßƒ° + 1∫Œ≈Õ 1πŸ¿Ã∆Ææø ¡§π– Ω∫ƒµ
+    f_lseek(&fil, g_NextReadPos + 1);
+
+    while (f_read(&fil, &c, 1, &br) == FR_OK && br == 1)
+    {
+      if (prev_c == '>' && c == '>')
+      {
+        // '>>' πŸ∑Œ æ’ ¿ßƒ°∑Œ µ«µπ∏≤
+        f_lseek(&fil, f_tell(&fil) - 2);
+        sync_found = 1;
+        break;
+      }
+      prev_c = c;
+
+      if (++scan_count >= MAX_SCAN)
+      {
+        printf("Scan limit (%lu bytes) reached. Stopping recovery.\r\n", MAX_SCAN);
+        break;
+      }
+    }
+
+    if (sync_found)
+    {
+      printf("SD_ERR_RETRY 1 %lu \r\n", f_tell(&fil)); //Recovery Success! Next record found at pos %lu
+      g_NextReadPos = f_tell(&fil);
+      f_close(&fil);
+      return SD_ERR_RETRY;   // ∏ﬁ¿Œ ∑Á«¡∞° ¥ŸΩ√ »£√‚ °Ê ∫π±∏µ» ¿ßƒ°∫Œ≈Õ ¡§ªÛ ¿–±‚
+    }
+    else
+    {
+      printf("SD_ERR_NEXT_FILE 5\r\n");//Recovery Failed. No more valid records in this file.
+      g_NextReadPos = 0;
+      f_close(&fil);
+      return SD_ERR_NEXT_FILE;
+    }
+  }
+
+  // ==========================================================
+  // °⁄ ¡§ªÛ «Ï¥ı »Æ¿Œ »ƒ ∞≠»≠µ» len ∞À¡ı
+  // ==========================================================
+  if (hdr.len < 2 || hdr.len > sizeof(readSDbuff))
+  {
+    printf("Critical Error: Invalid hdr.len(%u). Buffer size=%u\r\n",
+           hdr.len, (unsigned)sizeof(readSDbuff));
+	printf("SD_ERR_RETRY 2 %lu \r\n");
+
+    // ¿ﬂ∏¯µ» lenµµ µø±‚»≠ ±˙¡¸¿∏∑Œ ∞£¡÷
+    g_NextReadPos += sizeof(hdr);
+    f_close(&fil);
+    return SD_ERR_RETRY;
+  }
+
+  // µ•¿Ã≈Õ øœ¿¸ ¿–±‚ ∞ÀªÁ
+  res = f_read(&fil, readSDbuff, hdr.len, &br);
+  if (res != FR_OK || br != hdr.len)
+  {
+    printf("Data read error or incomplete: expected %u, got %u\r\n", hdr.len, br);
+    g_NextReadPos += sizeof(hdr);
+    f_close(&fil);
+	printf("SD_ERR_RETRY 3 %lu \r\n");
+
+    return SD_ERR_RETRY;
+  }
+
+  // (¿Ã«œ µ•¿Ã≈Õ ¿¸º€ ∑Œ¡˜)
+  uint32_t currentPos = f_tell(&fil);
+  uint32_t fileSize   = f_size(&fil);
+
+  // °⁄ [«ŸΩ… ∫Ø∞Ê] æ∆Ω∫≈∞ πÆ¿⁄ πËø≠(4πŸ¿Ã∆Æ) -> uint16_t º˝¿⁄(hhmm) ∫Ø»Ø
+  uint16_t parsed_hhmm = (hdr.hhmm[0] - '0') * 1000 +
+                         (hdr.hhmm[1] - '0') * 100 +
+                         (hdr.hhmm[2] - '0') * 10 +
+                         (hdr.hhmm[3] - '0');
+
+	printf("YYMMDD: %u, hhmm: %u\r\n",YYMMDD, parsed_hhmm);
+  if(Tx_DayTimeSave(YYMMDD, parsed_hhmm))
+  {
+  	printf("SD_CMD5_OVER_NEXT\r\n");
+	return SD_CMD5_OVER_NEXT;
+  }
+
+  // «¡∑Œ≈‰ƒ›ªÛ « ø‰ø° µ˚∂Û æ’ 4πŸ¿Ã∆Æ∏¶ dirName¿∏∑Œ ±≥√º
+  memcpy(readSDbuff, (uint8_t*)dirName, 4);
+
+  uint16_t crcidx = hdr.len - 2;
+  append_crc16(readSDbuff, crcidx);
+
+  Tx_Cmd_Instruction(readSDbuff, hdr.len);
+
+  TxAllBuff_Set(readSDbuff, hdr.len);
+
+  if (currentPos >= fileSize)
+  {
+    g_NextReadPos = 0;
+    finish = SD_END_NEXT_FILE;
+    printf("SD_END_NEXT_FILE\r\n");
+  }
+  else
+  {
+    g_NextReadPos = currentPos;
+  }
+
+  SD_Error_Chk(f_close(&fil), "f_close");
+
+  printf("SD_OK\r\n");
+  return finish;
+}
+
+uint8_t SD_Only_Read(const char* dirName, uint32_t YYMMDD , uint16_t* Len)
+{
+  RecordHeader hdr;
+  UINT br;
+  char filename[24] = {0,};
+  uint8_t finish = SD_OK;
+
+  sprintf(filename, "%s/%lu.txt", dirName, YYMMDD);
+
+  if (SD_Error_Chk(f_open(&fil, filename, FA_READ), "f_open"))
+  {
+    g_NextReadPos = 0;
+    return SD_NO_EXIST_FILE;
   }
 
   if (SD_Error_Chk(f_lseek(&fil, g_NextReadPos), "f_lseek"))
@@ -876,13 +1067,32 @@ uint8_t SD_Read_Step_TxMsg(const char* dirName, uint32_t YYMMDD)
   }
 
   FRESULT res = f_read(&fil, &hdr, sizeof(hdr), &br);
-  if (res != FR_OK || br < sizeof(hdr))
-  {
-    // EOF ∂«¥¬ «Ï¥ı¡∂¬˜ ¿–¡ˆ ∏¯«‘
-    g_NextReadPos = 0;
-    f_close(&fil);
-    return SD_END_NEXT_FILE;
-  }
+  // 1. «œµÂø˛æÓ/∆ƒ¿œΩ√Ω∫≈€ ¿–±‚ ø°∑Ø πﬂª˝ Ω√
+	if (res != FR_OK)
+	{
+	  printf("f_read header error = %d\r\n", res);
+	  g_NextReadPos = 0;
+	  f_close(&fil);
+	  return SD_ERR_NEXT_FILE;
+	}
+
+	// 2. ¡§ªÛ ∆ƒ¿œ ≥°(EOF) µµ¥ﬁ Ω√
+	if (br == 0)
+	{
+	  g_NextReadPos = 0;
+	  f_close(&fil);
+	  return SD_ERR_NEXT_FILE;
+	}
+
+	// 3. «Ï¥ı∞° 8πŸ¿Ã∆Æ πÃ∏∏¿∏∑Œ ¿ﬂ∑¡ ¿÷¥¬ ∫Ò¡§ªÛ ªÛ≈¬ (∆ƒ¿œ º’ªÛ)
+	if (br < sizeof(hdr))
+	{
+	  printf("Incomplete header (got %u bytes). File corrupted.\r\n", br);
+	  g_NextReadPos = 0;
+	  f_close(&fil);
+	  return SD_ERR_NEXT_FILE;
+	}
+
 
   // ==========================================================
   // °⁄ startFlag ∞À¡ı π◊ ø°∑Ø ∫π±∏(Recovery) ∑Œ¡˜
@@ -969,17 +1179,11 @@ uint8_t SD_Read_Step_TxMsg(const char* dirName, uint32_t YYMMDD)
                          (hdr.hhmm[2] - '0') * 10 +
                          (hdr.hhmm[3] - '0');
 
-  Tx_DayTimeSave(YYMMDD, parsed_hhmm);
+	printf("YYMMDD: %u, hhmm: %u\r\n",YYMMDD, parsed_hhmm);
 
-  // «¡∑Œ≈‰ƒ›ªÛ « ø‰ø° µ˚∂Û æ’ 4πŸ¿Ã∆Æ∏¶ dirName¿∏∑Œ ±≥√º
-  memcpy(readSDbuff, (uint8_t*)dirName, 4);
+//  TxAllBuff_Set(readSDbuff, hdr.len);
 
-  uint16_t crcidx = hdr.len - 2;
-  append_crc16(readSDbuff, crcidx);
-
-  HAL_UART_Transmit(&huart1, readSDbuff, hdr.len, 500);
-
-  TxAllBuff_Set(readSDbuff, hdr.len);
+  *Len = hdr.len;
 
   if (currentPos >= fileSize)
   {
@@ -994,6 +1198,252 @@ uint8_t SD_Read_Step_TxMsg(const char* dirName, uint32_t YYMMDD)
   SD_Error_Chk(f_close(&fil), "f_close");
   return finish;
 }
+
+void SD_Set_Idx(uint8_t idx)
+{
+	g_NextReadPos = idx;
+}
+
+uint32_t SD_Get_Idx()
+{
+	return g_NextReadPos;
+}
+
+void SD_Clear_File(const char* dirName, uint32_t yymmdd)
+{
+  char filename[24];
+  sprintf(filename, "%s/%lu.txt", dirName, yymmdd);
+
+  /* FA_CREATE_ALWAYS: ∆ƒ¿œ¿Ã ¿ÃπÃ ¡∏¿Á«ÿµµ ≥ªøÎ¿ª 0πŸ¿Ã∆Æ∑Œ øœ¿¸»˜ µ§æÓΩ·º≠ √ ±‚»≠«‘ */
+  if (SD_Error_Chk(f_open(&fil, filename, FA_CREATE_ALWAYS | FA_WRITE), "f_open clear"))
+  {
+      return;
+  }
+
+  SD_Error_Chk(f_close(&fil), "f_close");
+  printf("[%s] File Cleared.\r\n", filename);
+}
+
+
+
+uint8_t SD_Find_File_Exist(const char* dirName, uint32_t YYMMDD)
+{
+    char filename[32] ={0,};
+
+    snprintf(filename, sizeof(filename), "%s/%lu.txt", dirName, YYMMDD);
+	printf("%s\r\n",filename);
+    if (SD_Error_Chk(f_open(&fil, filename, FA_READ), "f_open"))
+    {
+        g_NextReadPos = 0;
+        return SD_NO_EXIST_FILE;
+    }
+	else
+	{
+		return SD_OK;
+	}
+
+
+}
+/**
+ * @brief  ¡ˆ¡§«— ≥Ø¬• ∆ƒ¿œø°º≠ ∆Ø¡§ Ω√∞¢(hhmm)¿« ∑πƒ⁄µÂ Ω√¿€ ¿ßƒ°(ø¿«¡º¬)∏¶ √£æ∆ g_NextReadPosø° º≥¡§
+ * @param  dirName : µ∑∫≈Õ∏Æ ¿Ã∏ß (øπ: "TDAH")
+ * @param  YYMMDD  : ≥Ø¬• (øπ: 260725)
+ * @param  hhmm    : √£∞Ì¿⁄ «œ¥¬ Ω√¿€ Ω√∞¢ (øπ: 930 -> 09:30)
+ * @retval 1: ∞Àªˆ º∫∞¯ (g_NextReadPos ∞ªΩ≈µ ), 0: ∞Àªˆ Ω«∆– ∂«¥¬ ¿Ø»ø ∑πƒ⁄µÂ æ¯¿Ω
+ */
+uint8_t SD_Find_Time_Position(const char* dirName, uint32_t YYMMDD, uint16_t hhmm, uint16_t* getTime)
+{
+    RecordHeader hdr;
+    UINT br;
+    char filename[32] ={0,};
+    uint32_t current_pos = 0;
+    uint8_t found = 0;
+
+    snprintf(filename, sizeof(filename), "%s/%lu.txt", dirName, YYMMDD);
+	printf("%s\r\n",filename);
+    if (SD_Error_Chk(f_open(&fil, filename, FA_READ), "f_open"))
+    {
+        g_NextReadPos = 0;
+        return SD_NO_EXIST_FILE;
+    }
+
+    while (1)
+    {
+        current_pos = f_tell(&fil);
+
+        // 1. «Ï¥ı ¿–±‚
+        FRESULT res = f_read(&fil, &hdr, sizeof(hdr), &br);
+        if (res != FR_OK || br < sizeof(hdr))
+        {
+            break; // EOF ∂«¥¬ ∆ƒ¿œ ≥°
+        }
+
+        // 2. µø±‚»≠ ∏∂≈©(startFlag ">>") ∞À¡ı π◊ ∫π±∏
+        if (hdr.startFlag[0] != '>' || hdr.startFlag[1] != '>')
+        {
+            printf("[FindPos] Sync lost at pos %lu. Scanning for '>>'...\r\n", current_pos);
+
+            uint8_t c;
+            uint8_t prev_c = 0;
+            uint8_t sync_found = 0;
+            uint32_t scan_count = 0;
+            const uint32_t MAX_SCAN = 4096;
+
+            // ¿ﬂ∏¯ ¿–¿∫ «Ï¥ı ¿ßƒ° + 1∫Œ≈Õ ¡§π– Ω∫ƒµ
+            f_lseek(&fil, current_pos + 1);
+
+            while (f_read(&fil, &c, 1, &br) == FR_OK && br == 1)
+            {
+                if (prev_c == '>' && c == '>')
+                {
+                    // '>>' Ω√¿€ ¿ßƒ°(«ˆ¿Á ¿ßƒ° - 2)∑Œ ¿Ãµø
+                    f_lseek(&fil, f_tell(&fil) - 2);
+                    sync_found = 1;
+                    break;
+                }
+                prev_c = c;
+
+                if (++scan_count >= MAX_SCAN)
+                {
+                    printf("[FindPos] Scan limit (%lu bytes) reached.\r\n", MAX_SCAN);
+                    break;
+                }
+            }
+
+            if (sync_found)
+            {
+                // °⁄ ∫π±∏ º∫∞¯: ªı∑Œ ∏¬√· '>>' ¿ßƒ°ø°º≠ «Ï¥ı∫Œ≈Õ ¥ŸΩ√ ¿–µµ∑œ ∑Á«¡ ¿ÁΩ√¿€
+                printf("[FindPos] Sync recovered at pos %lu\r\n", f_tell(&fil));
+                continue;
+            }
+            else
+            {
+                // ∫π±∏ Ω«∆–: ¥ı ¿ÃªÛ ¿Ø»ø ∑πƒ⁄µÂ æ¯¿Ω
+                printf("[FindPos] Recovery failed.\r\n");
+                break;
+            }
+        }
+
+        // 3. ∫Ò¡§ªÛ µ•¿Ã≈Õ ±Ê¿Ã ∞À¡ı (πˆ∆€ ø¿πˆ«√∑ŒøÏ πÊæÓ)
+        if (hdr.len < 2 || hdr.len > sizeof(readSDbuff))
+        {
+            printf("[FindPos] Invalid len(%u) at pos %lu. Stopping search.\r\n", hdr.len, current_pos);
+            break;
+        }
+
+        // 4. ASCII "0900" -> ¡§ºˆ 900 ∫Ø»Ø
+        uint16_t parsed_hhmm = (hdr.hhmm[0] - '0') * 1000 +
+                               (hdr.hhmm[1] - '0') * 100 +
+                               (hdr.hhmm[2] - '0') * 10 +
+                               (hdr.hhmm[3] - '0');
+
+        // 5. Ω√∞¢ ∫Ò±≥ (ø‰√ª Ω√∞¢ ¿ÃªÛ¿Œ √π π¯¬∞ ∑πƒ⁄µÂ ≈Ωªˆ)
+        if (parsed_hhmm >= hhmm)
+        {
+            g_NextReadPos = current_pos;
+            *getTime = parsed_hhmm;
+            found = 1;
+            printf("[FindPos] Target record found: requested=%04u, found=%04u at pos=%lu\r\n",
+                   hhmm, parsed_hhmm, g_NextReadPos);
+            break;
+        }
+
+        // 6. ¥ÎªÛ¿Ã æ∆¥œ∏È µ•¿Ã≈Õ øµø™∏∏≈≠ ∞«≥ ∂‹
+        if (f_lseek(&fil, current_pos + sizeof(hdr) + hdr.len) != FR_OK)
+        {
+            break;
+        }
+
+        // ∆ƒ¿œ ≥° √ ∞˙ πÊæÓ ∞ÀªÁ
+        if (f_tell(&fil) >= f_size(&fil))
+        {
+            break;
+        }
+    }
+
+    f_close(&fil);
+
+    if (!found)
+    {
+        printf("[FindPos] No record found for %04u in %s\r\n", hhmm, filename);
+        g_NextReadPos = 0;
+        return SD_NO_EXIST_TIME;
+    }
+
+    return SD_OK;
+}
+
+
+/* ============================================================
+ *  fatfs_sd.c ¿« RecordHeader / SD_Write_Record æ∆∑°¬ ø° ∫Ÿø©≥÷±‚
+ *  (RecordHeader, fil, readSDbuff ∏¶ ±◊¥Î∑Œ ªÁøÎ«‘)
+ * ============================================================ */
+
+#define SD_TIME_NOT_FOUND   0xFFFF
+
+/**
+  * @brief  dirName/YYYYMMDD.txt ø°º≠ compareTime(hhmm) ¿Ã«œ¿Œ Ω√∞£ ¡ﬂ ∞°¿Â ≈´ Ω√∞£ ∞Àªˆ
+  * @param  dirName     : ∆˙¥ı∏Ì (øπ: "TDUH05")
+  * @param  YYMMDD      : ≥Ø¬• (øπ: 20261005)
+  * @param  compareTime : ±‚¡ÿ Ω√∞£ hhmm (øπ: 1205)
+  * @retval √£¿∫ hhmm (øπ: 1205), «ÿ¥Á æ¯¿Ω/∆ƒ¿œ æ¯¿Ω/ø°∑Ø °Ê 0xFFFF
+  * @note   ∑πƒ⁄µÂ¥¬ Ω√∞£ ø¿∏ß¬˜º¯ ¿˙¿Â ¿¸¡¶
+  *         ∑πƒ⁄µÂ ±∏¡∂: [">>"][hhmm 4byte ASCII][len 2byte][data len byte]["\r\n"]
+  */
+uint16_t SD_Time_FindGet(const char* dirName, uint32_t YYMMDD, uint16_t compareTime)
+{
+  RecordHeader hdr;
+  UINT br;
+  char filename[24] = {0,};
+  uint16_t found = SD_TIME_NOT_FOUND;
+  uint32_t pos = 0;
+  uint32_t fileSize;
+
+  sprintf(filename, "%s/%lu.txt", dirName, YYMMDD);
+
+  if (f_open(&fil, filename, FA_READ) != FR_OK)
+    return SD_TIME_NOT_FOUND;            // ∆˙¥ı or ∆ƒ¿œ æ¯¿Ω
+
+  fileSize = f_size(&fil);
+
+  while ((pos + sizeof(hdr)) <= fileSize)
+  {
+    if (f_lseek(&fil, pos) != FR_OK) break;
+    if (f_read(&fil, &hdr, sizeof(hdr), &br) != FR_OK || br != sizeof(hdr)) break;
+
+    // ---- «Ï¥ı ∞À¡ı : ">>" + hhmm º˝¿⁄ 4∞≥ + len π¸¿ß ----
+    uint8_t valid = (hdr.startFlag[0] == '>' && hdr.startFlag[1] == '>');
+    for (uint8_t i = 0; i < 4 && valid; i++)
+    {
+      if (hdr.hhmm[i] < '0' || hdr.hhmm[i] > '9') valid = 0;
+    }
+    if (valid && (hdr.len < 2 || hdr.len > sizeof(readSDbuff))) valid = 0;
+
+    if (!valid)
+    {
+      pos++;                             // µø±‚ ±˙¡¸ °Ê 1πŸ¿Ã∆Ææø π–∏Èº≠ ¥Ÿ¿Ω ">>" ≈Ωªˆ
+      continue;
+    }
+
+    uint16_t t = (hdr.hhmm[0] - '0') * 1000 +
+                 (hdr.hhmm[1] - '0') * 100  +
+                 (hdr.hhmm[2] - '0') * 10   +
+                 (hdr.hhmm[3] - '0');
+
+    if (t > compareTime) break;          // ø¿∏ß¬˜º¯¿Ã∂Û ¿Ã»ƒ¥¬ ∫º « ø‰ æ¯¿Ω
+
+    found = t;                           // compareTime ¿Ã«œ ¡ﬂ «ˆ¿Á±Ó¡ˆ √÷¥Î
+    if (t == compareTime) break;         // ¡§»Æ»˜ ¿œƒ°«œ∏È πŸ∑Œ ¡æ∑·
+
+    pos += sizeof(hdr) + hdr.len + 2;    // «Ï¥ı + µ•¿Ã≈Õ + "\r\n" ∞«≥ ∂Ÿ±‚ (µ•¿Ã≈Õ¥¬ æ» ¿–¿Ω)
+  }
+
+  f_close(&fil);
+  return found;
+}
+
+
+
 void SD_Delete_Record(const char* dirName, uint32_t YYMMDD, uint16_t hhmm)
 {
     RecordHeader hdr;
@@ -1109,7 +1559,7 @@ void SD_Read_Step_Test()
 	g_NextReadPos = 0;
 	for(int i =0 ;i < 10;i++)
 	{
-		SD_Read_Step_TxMsg("TNOH", 260625);
+		SD_Read_Day_TxMsg("TNOH", 260625);
 		if(i !=0 && g_NextReadPos==0)
 		{
 			break;
@@ -1204,12 +1654,17 @@ void SD_CleanupOldFiles_Simple(const char* dirPath, uint16_t maxFiles)
 
 void SD_CleanupAll(void)
 {
-  SD_CleanupOldFiles_Simple("TDAH", 31);
-  SD_CleanupOldFiles_Simple("TOFH", 31);
-  SD_CleanupOldFiles_Simple("TDDH", 31);
-  SD_CleanupOldFiles_Simple("TFDH", 31);
-  SD_CleanupOldFiles_Simple("TNOH", 31);
-  SD_CleanupOldFiles_Simple("TFDH", 3);
+  SD_CleanupOldFiles_Simple("TDUH05", 31);//5
+  SD_CleanupOldFiles_Simple("TDUH30", 31);//5
+  SD_CleanupOldFiles_Simple("TOFH05", 31);//2
+  SD_CleanupOldFiles_Simple("TOFH30", 31);//2
+  SD_CleanupOldFiles_Simple("TDDH05", 31);//3
+  SD_CleanupOldFiles_Simple("TDDH05", 31);//3
+  SD_CleanupOldFiles_Simple("TNOH", 31);//6
+  SD_CleanupOldFiles_Simple("TFDH", 3);//4 √÷¥Î 3¿œ±Ó¡ˆ ∫∏∞¸«œ∞Ì ±◊π€¿«∞Õ¿∫ ªË¡¶
+
+
+
 }
 
 // ∞·∞˙ ¥„¿ª ±∏¡∂√º (»£√‚∫Œø°º≠ º±æ«ÿº≠ ≥—±Ë)
@@ -1338,7 +1793,7 @@ uint32_t SD_GetLast_1_TDAH()
 {
 	LastRecord last;
 	uint32_t YYMMDDhhmm;
-	if(SD_GetLastWritten("TDAH", &last))
+	if(SD_GetLastWritten("TDUH05", &last))
 	{
 		// last.yymmdd, last.hhmm = ∏∂¡ˆ∏∑¿∏∑Œ æ¥ ≥Ø¬•/Ω√∞¢
 		// ¿Ã∞… «ˆ¿Á Ω√∞¢¿Ã∂˚ ∫Ò±≥«ÿº≠ ±◊ ªÁ¿Ã æ» ∫∏≥Ω ±∏∞£ √≥∏Æ
@@ -1355,23 +1810,9 @@ uint32_t SD_GetLast_1_TDAH()
 }
 
 uint32_t tt1,tt2;
-uint8_t clrFlag;
 
-uint8_t timeStr[10][103] =
-{
-"1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111\r\n",
-"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\r\n",
-"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\r\n",
-"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\r\n",
-"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\r\n",
-"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\r\n",
-"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\r\n",
-"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\r\n",
-"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\r\n",
-"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\r\n"
-};
 
-void SD_Test()
+void SD_Read_Test()
 {
 	static uint8_t cnt = 0;
 	static uint32_t totalCnt;
@@ -1380,12 +1821,6 @@ void SD_Test()
 	{
 		hhmmLast = Get_hhmm();
 		tt1 = HAL_GetTick();
-
-		SD_Write_Record("TDAH", Get_YYMMDD(), Get_hhmm(), timeStr[cnt], 102);
-		SD_Write_Record("TOFH", Get_YYMMDD(), Get_hhmm(), timeStr[cnt], 102);
-		SD_Write_Record("TDDH", Get_YYMMDD(), Get_hhmm(), timeStr[cnt], 102);
-		SD_Write_Record("TFDH", Get_YYMMDD(), Get_hhmm(), timeStr[cnt], 102);
-		SD_Write_Record("TNOH", Get_YYMMDD(), Get_hhmm(), timeStr[cnt], 102);
 		cnt++;
 		cnt %= 10;
 

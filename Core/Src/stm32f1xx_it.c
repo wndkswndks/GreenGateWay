@@ -203,7 +203,9 @@ void SysTick_Handler(void)
     FatFsCnt = 0;
     SDTimer_Handler();
   }
+#if 1
   YYMMDDhhmm_Cal();
+#endif
 
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();

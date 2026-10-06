@@ -117,6 +117,8 @@ int main(void)
 
   /* MCU Configuration--------------------------------------------------------*/
 
+
+
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
@@ -145,13 +147,15 @@ int main(void)
   /* ���� g_firmware_sha256 ���� ���� �迭�� ���� �ؽ� 32����Ʈ�� �����Ǿ����ϴ�. */
   /* �� ���� ���α׷� �ڵ带 �� 1���ڶ� �����ϰ� �ٽ� �����ϸ� �˾Ƽ� ���մϴ�. */
 //  SEED_TestVector1_Verify();
- Greenlink_EncDec_Test();
+  Greenlink_EncDec_Test();
 
   Uart_Init();
-//  Test_Config();//
-  SD_Init();
+  Test_Config();//
   Gateway_Init();
-  Rsbery_initTest();
+  SD_Init();
+#if 0
+    Rsbery_initTest();
+#endif
 
   /* USER CODE END 2 */
 
@@ -162,11 +166,14 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-//      Testfunction();
-	  Gateway_Config();
+      Testfunction();
+	  Led_Toggle();
+#if 0
+  Gateway_Config();
 
-  	  TxTest();
-  	  Test_Tx_To_RasPi();
+  Test_Tx_To_RasPi();
+
+#endif
 
   }
   /* USER CODE END 3 */

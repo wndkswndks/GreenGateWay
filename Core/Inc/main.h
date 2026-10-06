@@ -90,6 +90,9 @@ typedef enum
 	SD_END_NEXT_FILE = 1,
 	SD_ERR_RETRY = 2,
 	SD_ERR_NEXT_FILE = 3,
+	SD_NO_EXIST_FILE = 4,
+	SD_NO_EXIST_TIME = 5,
+	SD_CMD5_OVER_NEXT = 6,
 } SD_EVNT_E;
 
 /* USER CODE END Private defines */
